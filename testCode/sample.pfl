@@ -4,8 +4,7 @@ float z, w = 1.2345, u = (int)y; // default value: 0.0
  // strongly typed, must use (TYPE) to convert the type
 bool b = false, c = true;
 func f = [x, b](int arg1, bool arg2)->void {return;} // func variable must be constant
-
-int &ref_y = y;
+int intArray[100]; // every element initialized with default value 0
 
 class A {
     int a_x, a_y;
