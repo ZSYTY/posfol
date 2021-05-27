@@ -7,6 +7,8 @@ find_package(
     Clang REQUIRED
 )
 
+add_subdirectory(parse)
+
 add_executable(${PROJECT_NAME}
     main.cpp
 )
@@ -22,7 +24,7 @@ target_compile_definitions(${PROJECT_NAME}
 llvm_map_components_to_libnames(LLVM_LIBS support core irreader)
 
 target_link_libraries(${PROJECT_NAME}
-    PUBLIC ${LLVM_LIBS}
+    PUBLIC ${LLVM_LIBS} parse
 )
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)

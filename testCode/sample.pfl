@@ -89,6 +89,12 @@ int main() {
 
     b.b_a.foo();
 
+    for (i = 1; i < 10; ++i) {
+        if (i == 5) {
+            print(i);
+        }
+    }
+
 
     return 0;
 }
