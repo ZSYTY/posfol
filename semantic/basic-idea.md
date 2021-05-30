@@ -8,9 +8,15 @@
 
 声明：
 
--   变量声明(variable)：`int a;`
--   函数声明(function)：`int f(int a, int b);`
--   类声明(class)：`class A{...};`
+-   变量声明(variable)：
+    -   纯声明：`int a;`、`A a;`
+    -   声明+定义：`int a = b + 1;`、`A a = new A();`
+-   函数声明(function)：
+    -   纯声明：`int f(int a, int b);`
+    -   声明+定义：`int f(int a, int b){...}`
+-   类声明(class)：
+    -   纯声明：`class A;`
+    -   声明+定义：`class A{...}`
 
 ##### expression
 
@@ -19,7 +25,6 @@
 -   赋值语句：`a = 1;`
 -   基本运算：`a = b + c;`
 -   调用函数：`a = f(b);`
--   创建类：`A a = new A();`
 
 ##### statement
 
@@ -47,7 +52,30 @@
 
 ##### 语义分析
 
-语义分析主要对AST进行类型检查，只要保证每条赋值语句、运算语句、函数调用语句的相关变量类型是对的，代码最后必然就能够成功执行
+yacc的{}里的动作属于语义分析：
+
+所有new节点的操作都只能在yacc的{}里做，`node.h`的所有类成员变量都只保存：
+
+-   指向非终结符的指针
+-   终结符的值
+
+以`int f(int a, int b, ...)`为例：
+
+~~~cpp
+class FunctionDeclaration {
+    Identifier returnType;
+    Identifier func;
+    std::vector<VariableDeclaration*>* paramList;
+}
+~~~
+
+int和f都是终结符，只需要给Identifier赋上type类型和name名称即可
+
+而param list作为一个整体是非终结符，需要用一个BNF的yacc推导来完成，在推导过程中，每个变量声明VariableDeclaration作为一个基本单元(向下还会继续解析，这里不再阐述)，可以看做是一个子树，我们需要返回该子树的root指针，这么些root指针组成一个vector就是param list的子树了，同样的，我们要把param list的子树的root指针返回给FunctionDeclaration节点，因此FunctionDeclaration类中会有`vector<VariableDeclaration*>*`这个成员变量，来接收param list子树
+
+
+
+此外，语义分析还需要对AST进行类型检查，只要保证每条赋值语句、运算语句、函数调用语句的相关变量类型是对的，代码最后必然就能够成功执行
 
 这里我选择用unordered_map来做{name: type}的映射，方便做类型检查，像之前说的，不同作用域下的map不同，需要利用栈结构来保证合理的变量引用
 
@@ -66,3 +94,6 @@
 LLVM负责把AST转化为可执行的目标代码，我们只需要生成LLVM IR即可
 
 注意，词法/语法分析中已经完成了AST，因此即使没有语法分析的类型检查，LLVM这一阶段照样可以进行，故语法分析与LLVM是可以并行开发的
+
+
+
