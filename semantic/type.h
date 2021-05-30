@@ -35,6 +35,7 @@ enum Type {
     CHAR,
     ARRAY,
     CLASS,
+    TYPE,
 
     ERROR
 };

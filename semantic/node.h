@@ -33,7 +33,6 @@ class Node {
     Node() {}
     virtual ~Node() {}
 
-    std::vector<Node*> children;
     virtual Type getType() const {
         return this->type;
     }
@@ -97,23 +96,32 @@ class Expression : public Statement {
 /**
  * @author gehao
  * 
- * identifier主要是：基本类型(如"int")、数组类型(如int a[n])、类类型(如class A中的"class")和自定义变量(如int a中的"a", int b[n]中的"b", class A中的"A")
- * identifier只负责保存该标识符的名称，具体type由yacc传入时决定
+ * identifier主要是：
+ * 类型本身：基本类型(如"int")、数组类型(如int a[n])、类类型(如class A中的"class")
+ * 自定义变量：如int a中的"a", int b[n]中的"b", class A中的"A"
+ * 常数：如666
+ * 
+ * identifier需要在创建对象时传入变量值：Identifier->numeric{$$=$1}, numeric->INT{$$=new Identifier(INT, $1->c_str())}|DOUBLE{$$=new Identifier(DOUBLE, $1->c_str())}
  * 基本类型：INT、LONG、FLOAT、DOUBLE、BOOLEAN、CHAR
  * 数组类型：ARRAY
  * 类类型：CLASS
- * 自定义变量：VARIABLE
  */
 class Identifier : public Expression {
    private:
-    Type type = IDENTIFIER;  // type需要在yacc创建对象时(比如在创建Declaration对象时，就可以把类型参数set到Identifier上了)被修改，这里只是给一个默认初始值
-    std::string name;        // 保存identifier的name，主要是保存自定义变量名
+    Type type = IDENTIFIER;       // type需要在yacc创建对象时(比如在创建Declaration对象时，就可以把类型参数set到Identifier上了)被修改，这里只是给一个默认初始值
+    std::string name = nullptr;   // 保存identifier的name，主要是保存自定义变量名
+    std::string value = nullptr;  // 如果Identifier是常数，则用string形式的value保存其值
+    bool isType = false;
+    bool isVariable = false;
+    bool isConst = false;
 
    public:
-    Identifier(const std::string& name, Type type) {
-        this->name = name;
-        this->type = type;
-    }
+    // 类型：type
+    Identifier(Type type) : type(type), isType(true) {}
+    // 变量：type : name
+    Identifier(Type type, const std::string& name) : type(type), name(name), isVariable(true) {}
+    // 常量：type : value
+    Identifier(Type type, std::string value) : type(type), value(value), isConst(true) {}
     ~Identifier() {}
 
     void setType(Type type) {
@@ -126,6 +134,10 @@ class Identifier : public Expression {
 
     std::string getName() const {
         return this->name;
+    }
+
+    std::string getValue() const {
+        return this->value;
     }
 };
 
