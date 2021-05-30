@@ -62,6 +62,7 @@ class Block : public Statement {
     std::vector<Statement*>* statementList = nullptr;
 
    public:
+    Block() : statementList(new  std::vector<Statement*>()) {}
     Block(std::vector<Statement*>* statementList) : statementList(statementList) {}
     ~Block() {
         delete statementList;
