@@ -15,7 +15,7 @@ void yyerror(const char* msg) {
     struct TreeNode* t;
 }
 %token <t> LP RP LB RB BEG END DOT COMMA COLON MUL DIV MOD UNEQUAL NOT PLUS MINUS GE GT LE LT EQUAL AND OR ASSIGN ADD_ASSIGN MINUS_ASSIGN MULTIPLE_ASSIGN DIV_ASSIGN MOD_ASSIGN SEMI FALSE TRUE PRINT BOOL_TYPE CHAR_TYPE INT_TYPE FLOAT_TYPE FUNC_TYPE READ FLOAT INT CHAR ELSE FOR WHILE IF ID PUBLIC PRIVATE IMPLEMENTS NEW CLASS INTERFACE
-%type <t> program global_stmts global_stmt
+%type <t>  program global_stmts global_stmts_nonempty global_stmt varible_decl varible_decl_type id_and_initial_list id_and_initial id_list id_list_nonempty args_list args_list_nonempty class_decl class_stmts class_stmts_nonempty class_stmt construction_decl access_label interface_decl interface_stmts interface_stmts_nonempty interface_stmt function_decl function_decl_type stmts stmts_nonempty stmt expr arithmetic term factor factor_nontype_convert entity object_member_entity array_entity function_call literal assign_expr logical_stmt if_stmt else_clause while_stmt for_stmt
 %left PLUS MINUS
 %left MUL DIV MOD
 %%
