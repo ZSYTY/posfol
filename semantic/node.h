@@ -3,10 +3,28 @@
 
 #include <iostream>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "type.h"
 
+// Type getTypeByName_233(std::string name) {
+//     std::unordered_map<std::string, Type> map;
+//     map["int"] = INT;
+//     map["long"] = LONG;
+//     map["float"] = FLOAT;
+//     map["double"] = DOUBLE;
+//     map["boolean"] = BOOLEAN;
+//     map["char"] = CHAR;
+//     map["array"] = ARRAY;
+//     map["class"] = CLASS;
+
+//     if (map.count(name) != 0) {
+//         return map[name];
+//     } else {
+//         return ERROR;
+//     }
+// }
 class Node {
    private:
     Type type = NODE;
@@ -79,15 +97,16 @@ class Expression : public Statement {
 /**
  * @author gehao
  * 
- * identifier主要是：基本类型(如"int")、类类型(如class A中的"class")和自定义变量(如int a中的"a", class A中的"A")
+ * identifier主要是：基本类型(如"int")、数组类型(如int a[n])、类类型(如class A中的"class")和自定义变量(如int a中的"a", int b[n]中的"b", class A中的"A")
  * identifier只负责保存该标识符的名称，具体type由yacc传入时决定
  * 基本类型：INT、LONG、FLOAT、DOUBLE、BOOLEAN、CHAR
+ * 数组类型：ARRAY
  * 类类型：CLASS
  * 自定义变量：VARIABLE
  */
 class Identifier : public Expression {
    private:
-    Type type = IDENTIFIER;  // type需要在yacc创建对象时被修改，这里只是给一个默认初始值
+    Type type = IDENTIFIER;  // type需要在yacc创建对象时(比如在创建Declaration对象时，就可以把类型参数set到Identifier上了)被修改，这里只是给一个默认初始值
     std::string name;        // 保存identifier的name，主要是保存自定义变量名
 
    public:
@@ -97,12 +116,227 @@ class Identifier : public Expression {
     }
     ~Identifier() {}
 
+    void setType(Type type) {
+        this->type = type;
+    }
+
     Type getType() const override {
         return this->type;
     }
 
     std::string getName() const {
         return this->name;
+    }
+};
+
+/**
+ * @author gehao
+ * 
+ * 算术表达式
+ */
+class ArithmeticExpression : public Expression {
+   private:
+    Type type = ARITHMETICEXPRESSION;
+
+   public:
+    ArithmeticExpression() {}
+    ~ArithmeticExpression() {}
+
+    Type getType() const override {
+        return this->type;
+    }
+};
+
+/** 
+ * @author gehao
+ * 
+ * 二元操作：expr op expr, + - * / < > <= >= = == 
+ * 最终expr会转化为Identifier, 即变量 
+ */
+class BinaryOperator : public ArithmeticExpression {
+   private:
+    Type type = BINARYOPERATOR;
+    int op = -1;
+    Expression* lhs = nullptr;
+    Expression* rhs = nullptr;
+
+   public:
+    BinaryOperator(Expression* lhs, int op, Expression* rhs) : lhs(lhs), op(op), rhs(rhs) {}
+    ~BinaryOperator() {
+        delete lhs;
+        delete rhs;
+    }
+
+    Type getType() const override {
+        return this->type;
+    }
+
+    int getOp() {
+        return op;
+    }
+
+    Expression* getLhs() {
+        return lhs;
+    }
+
+    Expression* getRhs() {
+        return rhs;
+    }
+};
+
+/** 
+ * @author gehao
+ * 函数调用：Identifier_func (expr_list)
+ * 参数表是一个list，每个元素都是Expression
+ */
+class FuncCallExpression : public Expression {
+   private:
+    Type type = FUNCCALLEXPRESSION;
+    Identifier* func = nullptr;
+    std::vector<Expression*>* paramExprList = nullptr;
+
+   public:
+    FuncCallExpression(Identifier* func, std::vector<Expression*>* paramExprList) : func(func), paramExprList(paramExprList) {}
+    ~FuncCallExpression() {
+        delete func;
+        delete paramExprList;
+    }
+
+    Type getType() const override {
+        return this->type;
+    }
+
+    Identifier* getFunc() {
+        return func;
+    }
+
+    std::vector<Expression*>* getParamExprList() {
+        return paramExprList;
+    }
+};
+
+/** 
+ * @author gehao
+ * 
+ * 赋值语句：变量赋值、数组赋值、类成员赋值
+ */
+class AssignExpression : public Expression {
+   private:
+    Type type = ASSIGNEXPRESSION;
+
+   public:
+    AssignExpression() {}
+    ~AssignExpression() {}
+
+    Type getType() const override {
+        return this->type;
+    }
+};
+
+/** 
+ * @author gehao
+ * 
+ * 变量赋值：Identifier_target = expr_source
+ * 这里的source是Expression的结果，可以是变量Identifier、数学运算结果BinaryOperator或者函数返回值FuncCall
+ */
+class VariableAssign : public AssignExpression {
+   private:
+    Type type = VARIABLEASSIGN;
+    Identifier* target = nullptr;
+    Expression* source = nullptr;
+
+   public:
+    VariableAssign(Identifier* target, Expression* source) : target(target), source(source) {}
+    ~VariableAssign() {
+        delete target;
+        delete source;
+    }
+
+    Type getType() const override {
+        return this->type;
+    }
+
+    Identifier* getTarget() {
+        return target;
+    }
+
+    Expression* getSource() {
+        return source;
+    }
+};
+
+/** 
+ * @author gehao
+ * 
+ * 数组赋值：Identifier_target[expr_index] = expr_val  如a[i]=1;
+ * index可能是表达式
+ */
+class ArrayAssign : public AssignExpression {
+   private:
+    Type type = ARRAYASSIGN;
+    Identifier* array = nullptr;
+    Expression* index = nullptr;
+    Expression* value = nullptr;
+
+   public:
+    ArrayAssign(Identifier* array, Expression* index, Expression* value) : array(array), index(index), value(value) {}
+    ~ArrayAssign() {
+        delete array;
+        delete index;
+        delete value;
+    }
+
+    Type getType() const override {
+        return this->type;
+    }
+
+    Identifier* getArray() {
+        return array;
+    }
+
+    Expression* getIndex() {
+        return index;
+    }
+
+    Expression* getValue() {
+        return value;
+    }
+};
+
+/** 
+ * @author gehao
+ * 
+ * 类变量赋值：Identifier_class.Identifier_member = expr_value
+ */
+class ClassAssign : public AssignExpression {
+   private:
+    Type type = CLASSASSIGN;
+    Identifier* _class;
+    Identifier* member;
+    Expression* value;
+
+   public:
+    ClassAssign(Identifier* _class, Identifier* member, Expression* value) : _class(_class), member(member), value(value) {}
+    ~ClassAssign() {
+        delete _class;
+        delete member;
+        delete value;
+    }
+
+    Type getType() const override {
+        return this->type;
+    }
+
+    Identifier* getClass() {
+        return _class;
+    }
+
+    Identifier* getMember() {
+        return member;
+    }
+
+    Expression* getValue() {
+        return value;
     }
 };
 
@@ -131,6 +365,8 @@ class Declaration : public Statement {
  * - 基本变量声明：int a;  int a = expr;
  * - 类变量声明：A a = new A();
  * 这里int, A, a都是Identifier，详情参考Identifier类
+ * 
+ * TODO: type不写成Identifier，而是直接通过判断来设置var的type
  */
 class VariableDeclaration : public Declaration {
    private:
