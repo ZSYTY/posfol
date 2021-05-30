@@ -227,6 +227,97 @@ class FuncCallExpression : public Expression {
     }
 };
 
+/**
+ * @author gehao
+ *  
+ * 类表达式：访问类成员变量a.b, 调用类成员函数a.f()
+ */
+class ClassExpression : public Expression {
+   private:
+    Type type = CLASSEXPRESSION;
+
+   public:
+    ClassExpression() {}
+    ~ClassExpression() {}
+
+    Type getType() const override {
+        return this->type;
+    }
+};
+
+/**
+ * @author gehao
+ * 
+ * 访问类成员变量表达式：Identifier_obj.Identifier_obj.Identifier_obj....Identifier_member
+ * a.b.c or a.b 
+ */
+class ClassVariableExpression : public ClassExpression {
+   private:
+    Type type = CLASSVARIABLEEXPRESSION;
+    Identifier* obj = nullptr;
+    std::vector<Identifier*>* objList = nullptr;  // 必须保证objList里除了最后一个Identifier，其余都是类对象，否则检查时报错
+
+   public:
+    ClassVariableExpression(Identifier* obj, std::vector<Identifier*>* objList) : obj(obj), objList(objList) {}
+    ~ClassVariableExpression() {
+        delete obj;
+        delete objList;
+    }
+
+    Type getType() const override {
+        return this->type;
+    }
+
+    Identifier* getObj() {
+        return obj;
+    }
+
+    std::vector<Identifier*>* getObjList() {
+        return objList;
+    }
+};
+
+/**
+ * @author gehao
+ * 
+ * 访问类成员函数： Identifier_obj.Identifier_obj.Identifier_obj....Identifier_func
+ * a.b.c.func or a.func
+ */
+class ClassFuncExpression : public ClassExpression {
+   private:
+    Type type = CLASSFUNCEXPRESSION;
+    Identifier* obj = nullptr;
+    std::vector<Identifier*>* objList = nullptr;  // 必须保证objList里除了最后一个Identifier，其余都是类对象，否则检查时报错
+    FuncCallExpression* func = nullptr; // 通过前面的对象block作用域，确定到当前的func，随后就可以像普通函数那样调用
+
+   public:
+    // a.f()
+    ClassFuncExpression(Identifier* obj, FuncCallExpression* func) : obj(obj), func(func) {}
+    // a.b.c.f()
+    ClassFuncExpression(Identifier* obj, std::vector<Identifier*>* objList, FuncCallExpression* func) : obj(obj), objList(objList), func(func) {}
+    ~ClassFuncExpression() {
+        delete obj;
+        delete objList;
+        delete func;
+    }
+
+    Type getType() const override {
+        return this->type;
+    }
+
+    Identifier* getObj() {
+        return obj;
+    }
+
+    std::vector<Identifier*>* getObjList() {
+        return objList;
+    }    
+
+    FuncCallExpression* getFunc() {
+        return func;
+    }    
+};
+
 /** 
  * @author gehao
  * 
