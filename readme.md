@@ -4,6 +4,8 @@
 
 #### 程序分解
 
+<center><img src="./node.png" /></center>
+
 ##### declaration
 
 声明：
