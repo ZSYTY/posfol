@@ -10,3 +10,11 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 .DS_store
+*/.DS_store
+
+*/lex.yy.c
+*/y.tab.c
+*/y.tab.cpp
+*/y.tab.h
+*/y.tab.hpp
+
