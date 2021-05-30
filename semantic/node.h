@@ -58,6 +58,11 @@ class Block : public Statement {
     }
 };
 
+/**
+ * @author gehao
+ * 
+ * Expression -> Identifier, ArithmeticExpression, AssignExpression, FuncCallExpression
+ */
 class Expression : public Statement {
    private:
     Type type = EXPRESSION;
@@ -243,6 +248,140 @@ class ClassDeclaration : public Declaration {
 
     Block* getClassBlock() {
         return this->classBlock;
+    }
+};
+
+/**
+ * @author gehao
+ * 
+ * logic statement: if、for、while 
+ */
+class LogicStatement : public Statement {
+   private:
+    Type type = LOGICSTATEMENT;
+
+   public:
+    LogicStatement() {}
+    ~LogicStatement() {}
+
+    Type getType() const override {
+        return this->type;
+    }
+};
+
+/**
+ * @author gehao
+ * 
+ * if语句：if (expr_condition) {block_true} else {block_false}
+ * - if () {}
+ * - if () {} else {}
+ */
+class IfStatement : public LogicStatement {
+   private:
+    Type type = IFSTATEMENT;
+    Expression* condition = nullptr;
+    Block* trueBlock = nullptr;
+    Block* falseBlock = nullptr;
+
+   public:
+    // if () {}
+    IfStatement(Expression* condition, Block* trueBlock) : condition(condition), trueBlock(trueBlock) {}
+    // if () {} else {}
+    IfStatement(Expression* condition, Block* trueBlock, Block* falseBlock) : condition(condition), trueBlock(trueBlock), falseBlock(falseBlock) {}
+    ~IfStatement() {
+        delete condition;
+        delete trueBlock;
+        delete falseBlock;
+    }
+
+    Type getType() const override {
+        return this->type;
+    }
+
+    Expression* getCondition() {
+        return this->condition;
+    }
+
+    Block* getTrueBlock() {
+        return this->trueBlock;
+    }
+
+    Block* getFalseBlock() {
+        return this->falseBlock;
+    }
+};
+
+/**
+ * @author gehao
+ * 
+ * for语句：for (expr_init; expr_condition; expr_change) {block}
+ */
+class ForStatement : public LogicStatement {
+   private:
+    Type type = FORSTATEMENT;
+    Expression* initial = nullptr;
+    Expression* condition = nullptr;
+    Expression* change = nullptr;
+    Block* forBlock = nullptr;
+
+   public:
+    ForStatement(Expression* initial, Expression* condition, Expression* change, Block* forBlock) : initial(initial), condition(condition), change(change), forBlock(forBlock) {}
+    ~ForStatement() {
+        delete initial;
+        delete condition;
+        delete change;
+        delete forBlock;
+    }
+
+    Type getType() const override {
+        return this->type;
+    }
+
+    Expression* getInitial() {
+        return initial;
+    }
+
+    Expression* getCondition() {
+        return condition;
+    }
+
+    Expression* getChange() {
+        return change;
+    }
+
+    Block* getForBlock() {
+        return forBlock;
+    }
+};
+
+/**
+ * @author gehao
+ * 
+ * while语句：while(expr_condition) {block} 
+ */
+class WhileStatement : public LogicStatement {
+   private:
+    Type type = WHILESTATEMENT;
+    Expression* condition = nullptr;
+    Block* whileBlock = nullptr;
+
+   public:
+    WhileStatement(Expression* condition, Block* whileBlock) : condition(condition), whileBlock(whileBlock) {}
+    ~WhileStatement() {
+        delete condition;
+        delete whileBlock;
+    }
+
+    Type getType() const override {
+        return this->type;
+    }
+
+    Expression* getCondition() {
+        return condition;
+    }
+
+    Block* getWhileBlock() {
+        return whileBlock;
     }
 };
 
