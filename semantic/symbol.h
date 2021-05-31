@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "type.h"
+#include "../tree/type.h"
 
 class SymbolTable {
    private:

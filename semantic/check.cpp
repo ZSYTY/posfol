@@ -2,10 +2,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include "node.h"
+#include "../tree/node.h"
 #include "sem_util.h"
 #include "symbol.h"
-#include "type.h"
+#include "../tree/type.h"
 
 extern Block* programBlock;
 
