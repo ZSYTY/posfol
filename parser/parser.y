@@ -168,18 +168,37 @@ stmt:
 ;
 
 expr:
+    entity ASSIGN expr
+|   entity ADD_ASSIGN expr
+|   entity SUB_ASSIGN expr
+|   entity MULTIPLE_ASSIGN expr
+|   entity DIV_ASSIGN expr
+|   entity MOD_ASSIGN expr
+|   expr0
+;
+
+expr0:
+    expr0 OR expr1
+|   expr1
+;
+
+expr1:
+    expr1 AND expr2
+|   expr2
+;
+
+expr2:
     arithmetic
-|   expr GE arithmetic
-|   expr GT arithmetic
-|   expr LE arithmetic
-|   expr LT arithmetic
-|   expr EQUAL arithmetic
-|   expr UNEQUAL arithmetic
+|   expr2 GE arithmetic
+|   expr2 GT arithmetic
+|   expr2 LE arithmetic
+|   expr2 LT arithmetic
+|   expr2 EQUAL arithmetic
+|   expr2 UNEQUAL arithmetic
 ;
 
 arithmetic:
-    assign_expr
-|   arithmetic PLUS term
+    arithmetic PLUS term
 |   arithmetic MINUS term
 |   term
 ;
@@ -235,14 +254,6 @@ literal:
 |   FALSE
 ;
 
-assign_expr:
-    entity ASSIGN expr
-|   entity ADD_ASSIGN expr
-|   entity SUB_ASSIGN expr
-|   entity MULTIPLE_ASSIGN expr
-|   entity DIV_ASSIGN expr
-|   entity MOD_ASSIGN expr
-;
 
 logical_stmt:
     if_stmt
