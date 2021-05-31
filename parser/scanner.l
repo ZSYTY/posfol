@@ -66,7 +66,7 @@ INTERFACE interface
 "||" {return OR;}
 "=" {return ASSIGN;}
 "+=" {return ADD_ASSIGN;}
-"-=" {return MINUS_ASSIGN;}
+"-=" {return SUB_ASSIGN;}
 "*=" {return MULTIPLE_ASSIGN;}
 "/=" {return DIV_ASSIGN;}
 "%=" {return MOD_ASSIGN;}
@@ -79,6 +79,7 @@ INTERFACE interface
 {INT_TYPE} {return INT_TYPE;}
 {FLOAT_TYPE} {return FLOAT_TYPE;}
 {FUNC_TYPE} {return FUNC_TYPE;}
+{VOID_TYPE} {return VOID_TYPE;}
 {READ} {return READ;}
 {FLOAT} {
     yylval.val = yytext;
