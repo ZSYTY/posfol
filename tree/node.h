@@ -5,6 +5,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <variant>
 
 #include "type.h"
 
@@ -163,7 +164,7 @@ class ArithmeticExpression : public Expression {
 /** 
  * @author gehao
  * 
- * 二元操作：expr op expr, + - * / < > <= >= = == 
+ * 二元操作：expr op expr, || $$ >= > <= < == != + - * / %
  * 最终expr会转化为Identifier, 即变量 
  */
 class BinaryOperator : public ArithmeticExpression {
@@ -196,6 +197,72 @@ class BinaryOperator : public ArithmeticExpression {
         return rhs;
     }
 };
+
+
+/**
+ * @author guoziyang
+ *
+ * 一元操作：op expr, - !
+ * 最终expr会转化为Identifier, 即变量
+ */
+class UnaryOperator : public ArithmeticExpression {
+private:
+    Type type = BINARYOPERATOR;
+    int op = -1;
+    Expression* hs = nullptr;
+
+public:
+    UnaryOperator(int op, Expression* hs) : op(op), hs(hs) {}
+    ~UnaryOperator() {
+        delete hs;
+    }
+
+    Type getType() const override {
+        return this->type;
+    }
+
+    int getOp() {
+        return op;
+    }
+
+    Expression* getHs() {
+        return hs;
+    }
+};
+
+
+/**
+ * @author guoziyang
+ *
+ * (int|float) a
+ */
+class TypeConvertOperator : public ArithmeticExpression {
+private:
+    Type type = TYPECONVERTOPERATOR;
+    Identifier* targetType;
+    Expression* expr = nullptr;
+
+public:
+    TypeConvertOperator(Identifier* targetType, Expression* expr) : targetType(targetType), expr(expr) {}
+    ~TypeConvertOperator() {
+        delete targetType;
+        delete expr;
+    }
+
+    Type getType() const override {
+        return this->type;
+    }
+
+    Identifier* getOp() {
+        return targetType;
+    }
+
+    Expression* getExpr() {
+        return expr;
+    }
+};
+
+
 
 /** 
  * @author gehao
@@ -319,21 +386,91 @@ class ClassFuncExpression : public ClassExpression {
     }    
 };
 
+class Entity : public Expression {
+private:
+    Type type = ENTITYEXPRESSION;
+    bool isTerminal;
+    Entity* entity = nullptr;
+
+    Identifier* identifier = nullptr;
+    Expression* expression = nullptr;
+    std::vector<Expression*>* vectorExpression = nullptr;
+
+public:
+    // a = xxx
+    Entity(Identifier* variable) : isTerminal(true), identifier(variable) {}
+    // a.b = xxx
+    Entity(Entity* entity, Identifier* variable) : isTerminal(false), entity(entity), identifier(variable) {}
+    // a[b+1] = xxx
+    Entity(Entity* entity, Expression* variable) : isTerminal(false), entity(entity), expression(variable) {}
+    // a(b,c) = xxx
+    Entity(Entity* entity, std::vector<Expression*>* variable) : isTerminal(false), entity(entity), vectorExpression(variable) {}
+
+    ~Entity() {
+        if(identifier != nullptr) {
+            delete identifier;
+        }
+        if(expression != nullptr) {
+            delete expression;
+        }
+        if(vectorExpression != nullptr) {
+            for (auto it = vectorExpression->begin(); it != vectorExpression->end(); ++it) {
+                delete *it;
+            }
+            delete vectorExpression;
+        }
+        if (entity != nullptr) {
+            delete entity;
+        }
+    }
+
+    bool getIsTerminal() {
+        return isTerminal;
+    }
+    Entity* getEntity() {
+        return entity;
+    }
+    Identifier* getIdentifier() {
+        return identifier;
+    }
+    Expression* getExpression() {
+        return expression;
+    }
+    std::vector<Expression*>* getVectorExpression() {
+        return vectorExpression;
+    }
+
+};
+
 /** 
- * @author gehao
- * 
+ * @author gehao, guoziyang
+ *
+ * op: = += -= *= /= %=
+ *
  * 赋值语句：变量赋值、数组赋值、类成员赋值
  */
 class AssignExpression : public Expression {
    private:
     Type type = ASSIGNEXPRESSION;
+    Entity* entity;
+    int op = -1;
+    Expression* expr;
 
    public:
-    AssignExpression() {}
-    ~AssignExpression() {}
+    AssignExpression(Entity* entity, int op, Expression* expr): entity(entity), op(op), expr(expr) {}
+    ~AssignExpression() {
+        delete entity;
+        delete expr;
+    }
 
     Type getType() const override {
         return this->type;
+    }
+    Entity* getEntity() {
+        return entity;
+    }
+    Expression* getExpr() {
+        return expr;
     }
 };
 
@@ -462,6 +599,53 @@ class Declaration : public Statement {
     }
 };
 
+
+class VariableDeclaration;
+
+/**
+ * @author guoziyang
+ *
+ * [outerVars](paramList) {funcBlock}
+ *
+ */
+class LambdaExpression : public Expression {
+private:
+    Type type = LAMBDADECLARATION;
+    std::vector<Identifier*>* outerVars = nullptr;
+    std::vector<VariableDeclaration*>* paramList = nullptr;
+    Block* funcBlock = nullptr;
+
+public:
+    LambdaExpression(std::vector<Identifier*>* outerVars, std::vector<VariableDeclaration*>* paramList, Block* funcBlock) : outerVars(outerVars), paramList(paramList), funcBlock(funcBlock) {}
+    ~LambdaExpression() {
+        for (auto it = outerVars->begin(); it != outerVars->end(); ++it) {
+            delete *it;
+        }
+        for (auto it = paramList->begin(); it != paramList->end(); ++it) {
+            delete *it;
+        }
+        delete outerVars;
+        delete paramList;
+        delete funcBlock;
+    }
+
+    Type getType() const override {
+        return this->type;
+    }
+
+    std::vector<Identifier*>* getOuterVars() {
+        return this->outerVars;
+    }
+
+    std::vector<VariableDeclaration*>* getParamList() {
+        return this->paramList;
+    }
+
+    Block* getFuncBlock() {
+        return this->funcBlock;
+    }
+};
+
 /**
  * @author gehao
  * 
@@ -473,21 +657,34 @@ class Declaration : public Statement {
  * TODO: type不写成Identifier，而是直接通过判断来设置var的type
  */
 class VariableDeclaration : public Declaration {
+public:
    private:
     Type type = VARIABLEDECLARATION;
     Identifier* varType = nullptr;
     Identifier* var = nullptr;
     Expression* expr = nullptr;
+    std::vector<Expression*>* arraySizes = nullptr;
 
    public:
     // 构造函数1：如int a;
     VariableDeclaration(Identifier* varType, Identifier* var) : varType(varType), var(var) {}
     // 构造函数2：如int a = b + 1;
     VariableDeclaration(Identifier* varType, Identifier* var, Expression* expr) : varType(varType), var(var), expr(expr) {}
+    // 构造函数4：如int a[100][10];
+    VariableDeclaration(Identifier* varType, Identifier* var, std::vector<Expression*>* arraySizes) : varType(varType), var(var), arraySizes(arraySizes) {}
+
     ~VariableDeclaration() {
         delete varType;
         delete var;
+        for (auto it = arraySizes->begin(); it != arraySizes->end(); ++it) {
+            delete *it;
+        }
+        delete arraySizes;
         delete expr;
+    }
+
+    void setVarType(Identifier* varType) {
+        this->varType = varType;
     }
 
     Type getType() const override {
@@ -501,10 +698,13 @@ class VariableDeclaration : public Declaration {
     Identifier* getVar() {
         return this->var;
     }
-
     Expression* getExpr() {
         return this->expr;
     }
+    std::vector<Expression*>* getArraySizes() {
+        return this->arraySizes;
+    }
+
 };
 
 /**
@@ -566,6 +766,7 @@ class ClassDeclaration : public Declaration {
    private:
     Type type = CLASSDECLARATION;
     Identifier* _class = nullptr;
+    Identifier* _interface = nullptr;
     Block* classBlock = nullptr;
 
    public:
@@ -573,8 +774,12 @@ class ClassDeclaration : public Declaration {
     ClassDeclaration(Identifier* _class) : _class(_class) {}
     // 类声明+定义
     ClassDeclaration(Identifier* _class, Block* classBlock) : _class(_class), classBlock(classBlock) {}
+    // 类声明+定义+接口
+    ClassDeclaration(Identifier* _class, Identifier* _interface, Block* classBlock) : _class(_class), _interface(_interface)), classBlock(classBlock) {}
+    
     ~ClassDeclaration() {
         delete _class;
+        delete _interface;
         delete classBlock;
     }
 
@@ -586,8 +791,40 @@ class ClassDeclaration : public Declaration {
         return this->_class;
     }
 
+    Identifier* getInterface() {
+        return this->_interface;
+    }
+
     Block* getClassBlock() {
         return this->classBlock;
+    }
+};
+
+class InterfaceDeclaration : public Declaration {
+private:
+    Type type = INTERFACEDECLARATION;
+    Identifier* _interface = nullptr;
+    Block* interfaceBlock = nullptr;
+
+public:
+    // 类声明+定义
+    InterfaceDeclaration(Identifier* _interface, Block* interfaceBlock) : _interface(_interface), interfaceBlock(interfaceBlock) {}
+
+    ~InterfaceDeclaration() {
+        delete _interface;
+        delete interfaceBlock;
+    }
+
+    Type getType() const override {
+        return this->type;
+    }
+
+    Identifier* getInterface() {
+        return this->_interface;
+    }
+
+    Block* getInterfaceBlock() {
+        return this->interfaceBlock;
     }
 };
 
