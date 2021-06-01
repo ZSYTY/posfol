@@ -1,14 +1,14 @@
 #ifndef __NODE_H__
 #define __NODE_H__
 
+#include <cstdio>
 #include <iostream>
 #include <string>
-#include <cstdio>
 #include <unordered_map>
-#include <vector>
 #include <variant>
-#include "../json/json.hpp"
+#include <vector>
 
+#include "../json/json.hpp"
 #include "type.h"
 
 using json = nlohmann::json;
@@ -86,7 +86,7 @@ class Block : public Statement {
     json genJSON() const override {
         json root;
         root["name"] = "Block";
-        for(auto it=statementList->begin(); it!=statementList->end(); it++){
+        for (auto it = statementList->begin(); it != statementList->end(); it++) {
             root["children"].push_back((*it)->genJSON());
         }
         return root;
@@ -126,8 +126,8 @@ class Expression : public Statement {
  */
 class Identifier : public Expression {
    private:
-    Type type = IDENTIFIER;       // type需要在yacc创建对象时(比如在创建Declaration对象时，就可以把类型参数set到Identifier上了)被修改，这里只是给一个默认初始值
-    std::string value;  // 如果Identifier是常数，则用string形式的value保存其值
+    Type type = IDENTIFIER;  // type需要在yacc创建对象时(比如在创建Declaration对象时，就可以把类型参数set到Identifier上了)被修改，这里只是给一个默认初始值
+    std::string value;       // 如果Identifier是常数，则用string形式的value保存其值
     bool isType = false;
 
    public:
@@ -152,13 +152,13 @@ class Identifier : public Expression {
     json genJSON() const override {
         json root;
         std::string type_name[] = {"INT",
-                "LONG",
-                "FLOAT",
-                "DOUBLE",
-                "BOOLEAN",
-                "CHAR",
-                "FUNC",
-                "VOID"};
+                                   "LONG",
+                                   "FLOAT",
+                                   "DOUBLE",
+                                   "BOOLEAN",
+                                   "CHAR",
+                                   "FUNC",
+                                   "VOID"};
         root["name"] = "Identifier: " + (isType ? type_name[type - Type::INT_DEFINE_TYPE] : value);
         return root;
     }
@@ -228,7 +228,6 @@ class BinaryOperator : public ArithmeticExpression {
     }
 };
 
-
 /**
  * @author guoziyang
  *
@@ -236,12 +235,12 @@ class BinaryOperator : public ArithmeticExpression {
  * 最终expr会转化为Identifier, 即变量
  */
 class UnaryOperator : public ArithmeticExpression {
-private:
+   private:
     Type type = BINARYOPERATOR;
     int op = -1;
     Expression* hs = nullptr;
 
-public:
+   public:
     UnaryOperator(int op, Expression* hs) : op(op), hs(hs) {}
     ~UnaryOperator() {
         delete hs;
@@ -267,19 +266,18 @@ public:
     }
 };
 
-
 /**
  * @author guoziyang
  *
  * (int|float) a
  */
 class TypeConvertOperator : public ArithmeticExpression {
-private:
+   private:
     Type type = TYPECONVERTOPERATOR;
     Identifier* targetType;
     Expression* expr = nullptr;
 
-public:
+   public:
     TypeConvertOperator(Identifier* targetType, Expression* expr) : targetType(targetType), expr(expr) {}
     ~TypeConvertOperator() {
         delete targetType;
@@ -312,12 +310,12 @@ public:
  * 参数表是一个list，每个元素都是Expression
  */
 class ClassNewExpression : public Expression {
-private:
+   private:
     Type type = CLASSNEWEXPRESSION;
     Identifier* className = nullptr;
     std::vector<Expression*>* paramExprList = nullptr;
 
-public:
+   public:
     ClassNewExpression(Identifier* className, std::vector<Expression*>* paramExprList) : className(className), paramExprList(paramExprList) {}
     ~ClassNewExpression() {
         delete className;
@@ -347,7 +345,7 @@ public:
 };
 
 class Entity : public Expression {
-private:
+   private:
     Type type = ENTITYEXPRESSION;
     bool isTerminal;
     Entity* entity = nullptr;
@@ -359,7 +357,7 @@ private:
     bool functionCall = false;
     std::vector<Expression*>* vectorExpression = nullptr;
 
-public:
+   public:
     // a = xxx
     Entity(Identifier* variable) : isTerminal(true), identifier(variable) {}
     // a.b = xxx
@@ -370,13 +368,13 @@ public:
     Entity(Entity* entity, std::vector<Expression*>* variable) : isTerminal(false), functionCall(true), entity(entity), vectorExpression(variable) {}
 
     ~Entity() {
-        if(identifier != nullptr) {
+        if (identifier != nullptr) {
             delete identifier;
         }
-        if(expression != nullptr) {
+        if (expression != nullptr) {
             delete expression;
         }
-        if(vectorExpression != nullptr) {
+        if (vectorExpression != nullptr) {
             for (auto it = vectorExpression->begin(); it != vectorExpression->end(); ++it) {
                 delete *it;
             }
@@ -406,9 +404,9 @@ public:
     json genJSON() const override {
         json root;
         root["name"] = "Entity" + std::string(objectCall ? ": attr_call" : "") + std::string(arrayIndex ? ": array_index" : "") + (functionCall ? ": functionCall" : "");
-        entity != nullptr ? root["children"].push_back(entity->genJSON()) : (void) 0;
-        identifier != nullptr ? root["children"].push_back(identifier->genJSON()) : (void) 0;
-        expression != nullptr ? root["children"].push_back(expression->genJSON()) : (void) 0;
+        entity != nullptr ? root["children"].push_back(entity->genJSON()) : (void)0;
+        identifier != nullptr ? root["children"].push_back(identifier->genJSON()) : (void)0;
+        expression != nullptr ? root["children"].push_back(expression->genJSON()) : (void)0;
 
         if (vectorExpression != nullptr) {
             for (auto it = vectorExpression->begin(); it != vectorExpression->end(); ++it) {
@@ -417,7 +415,6 @@ public:
         }
         return root;
     }
-
 };
 
 /** 
@@ -435,7 +432,7 @@ class AssignExpression : public Expression {
     Expression* expr;
 
    public:
-    AssignExpression(Entity* entity, int op, Expression* expr): entity(entity), op(op), expr(expr) {}
+    AssignExpression(Entity* entity, int op, Expression* expr) : entity(entity), op(op), expr(expr) {}
     ~AssignExpression() {
         delete entity;
         delete expr;
@@ -457,6 +454,70 @@ class AssignExpression : public Expression {
         root["name"] = "AssignExpression" + (op != -1 ? op_name[op] : "");
         root["children"].push_back(entity->genJSON());
         root["children"].push_back(expr->genJSON());
+        return root;
+    }
+};
+
+/**
+ * @author guoziyang
+ *
+ * [outerVars](paramList) {funcBlock}
+ *
+ */
+class LambdaExpression : public Expression {
+   private:
+    Type type = LAMBDADECLARATION;
+    std::vector<Identifier*>* outerVars = nullptr;
+    std::vector<VariableDeclaration*>* paramList = nullptr;
+    Identifier* returnType;
+    Block* funcBlock = nullptr;
+
+   public:
+    LambdaExpression(std::vector<Identifier*>* outerVars, std::vector<VariableDeclaration*>* paramList, Identifier* returnType, Block* funcBlock) : outerVars(outerVars), paramList(paramList), returnType(returnType), funcBlock(funcBlock) {}
+    ~LambdaExpression() {
+        for (auto it = outerVars->begin(); it != outerVars->end(); ++it) {
+            delete *it;
+        }
+        for (auto it = paramList->begin(); it != paramList->end(); ++it) {
+            delete *it;
+        }
+        delete outerVars;
+        delete paramList;
+        delete returnType;
+        delete funcBlock;
+    }
+
+    Type getType() const override {
+        return this->type;
+    }
+
+    std::vector<Identifier*>* getOuterVars() {
+        return this->outerVars;
+    }
+
+    std::vector<VariableDeclaration*>* getParamList() {
+        return this->paramList;
+    }
+
+    Identifier* getReturnType() {
+        return this->returnType;
+    }
+
+    Block* getFuncBlock() {
+        return this->funcBlock;
+    }
+
+    json genJSON() const override {
+        json root;
+        root["name"] = "LambdaExpression";
+        for (auto it = outerVars->begin(); it != outerVars->end(); ++it) {
+            root["children"].push_back((*it)->genJSON());
+        }
+        for (auto it = paramList->begin(); it != paramList->end(); ++it) {
+            root["children"].push_back((*it)->genJSON());
+        }
+        root["children"].push_back(returnType->genJSON());
+        root["children"].push_back(funcBlock->genJSON());
         return root;
     }
 };
@@ -490,7 +551,6 @@ class Declaration : public Statement {
  * TODO: type不写成Identifier，而是直接通过判断来设置var的type
  */
 class VariableDeclaration : public Declaration {
-public:
    private:
     Type type = VARIABLEDECLARATION;
     Identifier* varType = nullptr;
@@ -541,80 +601,14 @@ public:
     json genJSON() const override {
         json root;
         root["name"] = "VariableDeclaration";
-        varType != nullptr ? root["children"].push_back(varType->genJSON()) : (void) 0;
-        var != nullptr ? root["children"].push_back(var->genJSON()) : (void) 0;
-        expr != nullptr ? root["children"].push_back(expr->genJSON()) : (void) 0;
+        varType != nullptr ? root["children"].push_back(varType->genJSON()) : (void)0;
+        var != nullptr ? root["children"].push_back(var->genJSON()) : (void)0;
+        expr != nullptr ? root["children"].push_back(expr->genJSON()) : (void)0;
         if (arraySizes != nullptr) {
             for (auto it = arraySizes->begin(); it != arraySizes->end(); ++it) {
                 root["children"].push_back((*it)->genJSON());
             }
         }
-        return root;
-    }
-
-};
-
-
-/**
- * @author guoziyang
- *
- * [outerVars](paramList) {funcBlock}
- *
- */
-class LambdaExpression : public Expression {
-private:
-    Type type = LAMBDADECLARATION;
-    std::vector<Identifier*>* outerVars = nullptr;
-    std::vector<VariableDeclaration*>* paramList = nullptr;
-    Identifier* returnType;
-    Block* funcBlock = nullptr;
-
-public:
-    LambdaExpression(std::vector<Identifier*>* outerVars, std::vector<VariableDeclaration*>* paramList, Identifier* returnType, Block* funcBlock) : outerVars(outerVars), paramList(paramList), returnType(returnType), funcBlock(funcBlock) {}
-    ~LambdaExpression() {
-        for (auto it = outerVars->begin(); it != outerVars->end(); ++it) {
-            delete *it;
-        }
-        for (auto it = paramList->begin(); it != paramList->end(); ++it) {
-            delete *it;
-        }
-        delete outerVars;
-        delete paramList;
-        delete returnType;
-        delete funcBlock;
-    }
-
-    Type getType() const override {
-        return this->type;
-    }
-
-    std::vector<Identifier*>* getOuterVars() {
-        return this->outerVars;
-    }
-
-    std::vector<VariableDeclaration*>* getParamList() {
-        return this->paramList;
-    }
-
-    Identifier* getReturnType() {
-        return this->returnType;
-    }
-
-    Block* getFuncBlock() {
-        return this->funcBlock;
-    }
-
-    json genJSON() const override {
-        json root;
-        root["name"] = "LambdaExpression";
-        for (auto it = outerVars->begin(); it != outerVars->end(); ++it) {
-            root["children"].push_back((*it)->genJSON());
-        }
-        for (auto it = paramList->begin(); it != paramList->end(); ++it) {
-            root["children"].push_back((*it)->genJSON());
-        }
-        root["children"].push_back(returnType->genJSON());
-        root["children"].push_back(funcBlock->genJSON());
         return root;
     }
 };
@@ -668,14 +662,14 @@ class FunctionDeclaration : public Declaration {
     json genJSON() const override {
         json root;
         root["name"] = "FunctionDeclaration";
-        returnType != nullptr ? root["children"].push_back(returnType->genJSON()) : (void) 0;
-        func != nullptr ? root["children"].push_back(func->genJSON()) : (void) 0;
+        returnType != nullptr ? root["children"].push_back(returnType->genJSON()) : (void)0;
+        func != nullptr ? root["children"].push_back(func->genJSON()) : (void)0;
         if (paramList != nullptr) {
             for (auto it = paramList->begin(); it != paramList->end(); ++it) {
                 root["children"].push_back((*it)->genJSON());
             }
         }
-        funcBlock != nullptr ? root["children"].push_back(funcBlock->genJSON()) : (void) 0;
+        funcBlock != nullptr ? root["children"].push_back(funcBlock->genJSON()) : (void)0;
         return root;
     }
 };
@@ -701,7 +695,7 @@ class ClassDeclaration : public Declaration {
     ClassDeclaration(Identifier* _class, Block* classBlock) : _class(_class), classBlock(classBlock) {}
     // 类声明+定义+接口
     ClassDeclaration(Identifier* _class, Identifier* _interface, Block* classBlock) : _class(_class), _interface(_interface), classBlock(classBlock) {}
-    
+
     ~ClassDeclaration() {
         delete _class;
         delete _interface;
@@ -726,20 +720,20 @@ class ClassDeclaration : public Declaration {
     json genJSON() const override {
         json root;
         root["name"] = "ClassDeclaration";
-        _class != nullptr ? root["children"].push_back(_class->genJSON()) : (void) 0;
-        _interface != nullptr ? root["children"].push_back(_interface->genJSON()) : (void) 0;
-        classBlock != nullptr ? root["children"].push_back(classBlock->genJSON()) : (void) 0;
+        _class != nullptr ? root["children"].push_back(_class->genJSON()) : (void)0;
+        _interface != nullptr ? root["children"].push_back(_interface->genJSON()) : (void)0;
+        classBlock != nullptr ? root["children"].push_back(classBlock->genJSON()) : (void)0;
         return root;
     }
 };
 
 class InterfaceDeclaration : public Declaration {
-private:
+   private:
     Type type = INTERFACEDECLARATION;
     Identifier* _interface = nullptr;
     Block* interfaceBlock = nullptr;
 
-public:
+   public:
     // 类声明+定义
     InterfaceDeclaration(Identifier* _interface, Block* interfaceBlock) : _interface(_interface), interfaceBlock(interfaceBlock) {}
 
@@ -762,8 +756,8 @@ public:
     json genJSON() const override {
         json root;
         root["name"] = "InterfaceDeclaration";
-        _interface != nullptr ? root["children"].push_back(_interface->genJSON()) : (void) 0;
-        interfaceBlock != nullptr ? root["children"].push_back(interfaceBlock->genJSON()) : (void) 0;
+        _interface != nullptr ? root["children"].push_back(_interface->genJSON()) : (void)0;
+        interfaceBlock != nullptr ? root["children"].push_back(interfaceBlock->genJSON()) : (void)0;
         return root;
     }
 };
@@ -829,9 +823,9 @@ class IfStatement : public LogicStatement {
     json genJSON() const override {
         json root;
         root["name"] = "IfStatement";
-        condition != nullptr ? root["children"].push_back(condition->genJSON()) : (void) 0;
-        trueBlock != nullptr ? root["children"].push_back(trueBlock->genJSON()) : (void) 0;
-        falseBlock != nullptr ? root["children"].push_back(falseBlock->genJSON()) : (void) 0;
+        condition != nullptr ? root["children"].push_back(condition->genJSON()) : (void)0;
+        trueBlock != nullptr ? root["children"].push_back(trueBlock->genJSON()) : (void)0;
+        falseBlock != nullptr ? root["children"].push_back(falseBlock->genJSON()) : (void)0;
         return root;
     }
 };
@@ -880,10 +874,10 @@ class ForStatement : public LogicStatement {
     json genJSON() const override {
         json root;
         root["name"] = "ForStatement";
-        initial != nullptr ? root["children"].push_back(initial->genJSON()) : (void) 0;
-        condition != nullptr ? root["children"].push_back(condition->genJSON()) : (void) 0;
-        change != nullptr ? root["children"].push_back(change->genJSON()) : (void) 0;
-        forBlock != nullptr ? root["children"].push_back(forBlock->genJSON()) : (void) 0;
+        initial != nullptr ? root["children"].push_back(initial->genJSON()) : (void)0;
+        condition != nullptr ? root["children"].push_back(condition->genJSON()) : (void)0;
+        change != nullptr ? root["children"].push_back(change->genJSON()) : (void)0;
+        forBlock != nullptr ? root["children"].push_back(forBlock->genJSON()) : (void)0;
         return root;
     }
 };
@@ -920,12 +914,11 @@ class WhileStatement : public LogicStatement {
     json genJSON() const override {
         json root;
         root["name"] = "WhileStatement";
-        condition != nullptr ? root["children"].push_back(condition->genJSON()) : (void) 0;
-        whileBlock != nullptr ? root["children"].push_back(whileBlock->genJSON()) : (void) 0;
+        condition != nullptr ? root["children"].push_back(condition->genJSON()) : (void)0;
+        whileBlock != nullptr ? root["children"].push_back(whileBlock->genJSON()) : (void)0;
         return root;
     }
 };
-
 
 /**
  * @author guoziyang
@@ -933,11 +926,11 @@ class WhileStatement : public LogicStatement {
  * return语句：return; return expr;
  */
 class ReturnStatement : public LogicStatement {
-private:
+   private:
     Type type = RETURNSTATEMENT;
     Expression* expr = nullptr;
 
-public:
+   public:
     ReturnStatement(Expression* expr) : expr(expr) {}
     ReturnStatement() : expr(nullptr) {}
     ~ReturnStatement() {
@@ -955,11 +948,10 @@ public:
     json genJSON() const override {
         json root;
         root["name"] = "ReturnStatement";
-        expr != nullptr ? root["children"].push_back(expr->genJSON()) : (void) 0;
+        expr != nullptr ? root["children"].push_back(expr->genJSON()) : (void)0;
         return root;
     }
 };
-
 
 /**
  * @author guoziyang
@@ -969,14 +961,14 @@ public:
  */
 
 class IOStatement : public LogicStatement {
-private:
+   private:
     Type type = IOSTATEMENT;
     bool isRead = false;
     Expression* expr = nullptr;
     Entity* entity = nullptr;
     std::string printText = "";
 
-public:
+   public:
     IOStatement(Expression* expr) : isRead(false), expr(expr) {}
     IOStatement(Entity* entity) : isRead(true), entity(entity) {}
     IOStatement(std::string printText) : isRead(false), printText(printText) {}
@@ -1003,8 +995,8 @@ public:
     json genJSON() const override {
         json root;
         root["name"] = printText != "" ? "IOStatement: " + printText : "IOStatement";
-        expr != nullptr ? root["children"].push_back(expr->genJSON()) : (void) 0;
-        entity != nullptr ? root["children"].push_back(entity->genJSON()) : (void) 0;
+        expr != nullptr ? root["children"].push_back(expr->genJSON()) : (void)0;
+        entity != nullptr ? root["children"].push_back(entity->genJSON()) : (void)0;
         return root;
     }
 };
