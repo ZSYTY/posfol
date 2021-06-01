@@ -97,5 +97,6 @@ LLVM负责把AST转化为可执行的目标代码，我们只需要生成LLVM IR
 
 注意，词法/语法分析中已经完成了AST，因此即使没有语法分析的类型检查，LLVM这一阶段照样可以进行，故语法分析与LLVM是可以并行开发的
 
+#### Visualization
 
-
+因为CORS的缘故不能直接打开.html，最简单的办法是在`visualization/`下用`python -m server`建立本地服务器后打开。
