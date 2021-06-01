@@ -98,11 +98,12 @@ var graph = new G6.TreeGraph({
         }
     }
 });
-$.getJSON('https://gw.alipayobjects.com/os/antvdemo/assets/data/modeling-methods.json', function(data) {
-    G6.Util.traverseTree(data, function(item) {
+d3.json("AST_tree.json",function(erro, root){
+
+    G6.Util.traverseTree(root, function(item) {
         item.id = item.name;
     });
-    graph.data(data);
+    graph.data(root);
     graph.render();
     graph.fitView();
 });
