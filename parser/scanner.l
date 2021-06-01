@@ -1,10 +1,10 @@
 %option noyywrap
 %{
-#include <math.h>
-#include <string.h>
-#include "y.tab.h"
-#include <stdio.h>
-#include "tree.h"
+#include <cmath>
+#include <cstring>
+#include <cstdio>
+#include "y.tab.hpp"
+#include <cstdio>
 #include "token.h"
 int curLineNum = 1;
 
@@ -16,7 +16,7 @@ FALSE false
 TRUE true
 PRINT print
 BOOL_TYPE bool
-CHAR_TYPE CHAR
+CHAR_TYPE char
 INT_TYPE int
 FLOAT_TYPE float
 FUNC_TYPE func
@@ -24,7 +24,8 @@ VOID_TYPE void
 READ read
 INT [0-9]+
 FLOAT [0-9]+(".")[0-9]+
-CHAR \'[.]\'
+CHAR \'.\'
+STRING \"[^"]*\"
 ELSE else
 FOR for
 WHILE while
@@ -36,11 +37,13 @@ IMPLEMENTS implements
 NEW new
 CLASS class
 INTERFACE interface
-
+RETURN return
 
 %%
 [\n] {++curLineNum;}
 [ \t\r\a]+ {};
+"//"[^\n]* {};
+"/*"([^\*]|(\*)*[^\*/])*(\*)*"*/" {};
 "(" {return LP;}
 ")" {return RP;}
 "[" {return LB;}
@@ -48,6 +51,7 @@ INTERFACE interface
 "{" {return BEG;}
 "}" {return END;}
 "." {return DOT;}
+"->" {return ARROR;}
 "," {return COMMA;}
 ":" {return COLON;}
 "*" {return MUL;}
@@ -71,8 +75,8 @@ INTERFACE interface
 "/=" {return DIV_ASSIGN;}
 "%=" {return MOD_ASSIGN;}
 ";" {return SEMI;}
-{FALSE} {yylval.val = yytext; return FALSE;}
-{TRUE} {yylval.val = yytext; return TRUE;}
+{FALSE} {yylval.val = new std::string(yytext); return FALSE;}
+{TRUE} {yylval.val = new std::string(yytext); return TRUE;}
 {PRINT} {return PRINT;}
 {BOOL_TYPE} {return BOOL_TYPE;}
 {CHAR_TYPE} {return CHAR_TYPE;}
@@ -82,29 +86,35 @@ INTERFACE interface
 {VOID_TYPE} {return VOID_TYPE;}
 {READ} {return READ;}
 {FLOAT} {
-    yylval.val = yytext;
+    yylval.val = new std::string(yytext);
     return FLOAT;
 }
 {INT} {
-    yylval.val = yytext;
+    yylval.val = new std::string(yytext);
     return INT;
 }
 {CHAR} {
     std::string val(1, yytext[1]);
-    yylval.val = val;
+    yylval.val = new std::string(val);
     return CHAR;
+}
+{STRING} {
+    std::string string_yy(yytext);
+    yylval.val = new std::string(string_yy.begin() + 1, string_yy.end() - 1);
+    return STRING;
 }
 {ELSE} {return ELSE;}
 {FOR} {return FOR;}
 {WHILE} {return WHILE;}
 {IF} {return IF;}
-{ID} {yylval.valString = yytext; return ID;}
 {PUBLIC} { return PUBLIC;}
 {PRIVATE} { return PRIVATE;}
 {IMPLEMENTS} { return IMPLEMENTS;}
-{NEW} { return NEW;}
+{NEW} { puts("scan new"); return NEW;}
 {CLASS} { return CLASS;}
 {INTERFACE} { return INTERFACE;}
+{RETURN} {return RETURN;}
+{ID} {yylval.val = new std::string(yytext); return ID;}
 <<EOF>> {return -1;}
 . {lex_error("Unrecognized character", curLineNum);}
 
