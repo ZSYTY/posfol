@@ -1,0 +1,113 @@
+int x;
+int y = -1; // default value: 0
+char s0;
+char s1 = 'a'; // default value: '\0'
+float z;
+float w = 1.2345;
+float u = (float)y; // default value: 0.0
+ // strongly typed, must use (TYPE) to convert the type
+bool b = false;
+bool c = true; // default to be false
+func f = [x, b](int arg1, bool arg2)->void {return;}; // func variable must be constant
+int intArray[100]; // every element initialized with default value 0
+
+class A {
+    public int a_x;
+    public int a_y;
+    public char a_s;
+
+    // use prefix '__' to mark the private variables and methods
+    private int a_z_private;
+
+    public A() { // must implement construction function
+        a_x = 0;
+        a_y = 1;
+        a_s = '1';
+    }
+
+    public void foo() {
+        a_x = 1;
+    }
+
+    private void fee() {
+        self.foo();
+    }
+
+    // ne deconstruction function
+};
+
+interface BB {
+    int getValue();
+    void setValue(int x);
+};
+
+class B implements BB { // only one interface can be implemented, and no extending
+    public int b_x;
+    public A b_a; // default to be null
+    public B(int x) {
+        b_a = new A();
+        b_x = x;
+    }
+    public int getValue() {
+        return b_x;
+    }
+    public void setValue(int x) {
+        return b_x;
+    }
+};
+
+void printValue(int x) {
+    // use llvm to call printf (use the type of variable to infer the format string, e.g. "%d", "%s", and "%f")
+    print("print from printValue\n");
+    print(x);
+    print("\n");
+}
+
+void funcfunc(func f) {
+    f();
+}
+
+int main() {
+    // use llvm to call scanf
+    int input_i;
+    read(input_i);
+    char input_s;
+    read(input_s);
+    float input_f;
+    read(input_f);
+
+    int ii = 0;
+
+    func print_input_f = [ii]()->char { // pass the address of ii into func, and ref the address when use ii
+        printValue(ii);
+        return 'Q';
+    };
+
+    print_input_f(); // print 0
+
+    func sample_f = [input_s, print_input_f]()->char {
+        funcfunc(print_input_f);
+        return input_s;
+    };
+
+    A a = new A();
+
+    A copy_a = a;
+
+    a.foo();
+
+    B b = new B(2333);
+
+    BB inter_b = b;
+
+    b.b_a.foo();
+
+    for (i = 1; i < 10; i += 1) {
+        if (i == 5 && ii == 1) {
+            print(i);
+        }
+    }
+
+
+    return 0;
+}

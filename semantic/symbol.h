@@ -5,7 +5,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "node.h"
+#include "../tree/node.h"
+#include "../tree/type.h"
 
 /**
  * @author gehao
@@ -19,7 +20,7 @@
  */
 class SymbolTable {
    private:
-    std::vector<std::unordered_map<std::string, Declaration*>> symbolTable;
+    std::vector<std::unordered_map<std::string, Declaration*> > symbolTable;
 
    public:
     SymbolTable() {}
