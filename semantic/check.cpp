@@ -83,3 +83,38 @@ bool check(Block* root) {
 
     symbolTable.pop();
 }
+
+/**
+ * @author gehao
+ * 
+ * 校验Expression的类型：Identifier、 FuncCallExpression、ArithmeticExpression、AssignExpression
+ */
+bool checkExpression(Expression* expr) {
+    if (expr == nullptr) {
+        return false;
+    }
+
+    // Identifier由yacc保证类型✅
+    if (instanceof <Identifier>(expr)) {
+        return true;
+    }
+    // 校验Func Call是否正确：
+    // - 函数名是否存在于symbolTable中
+    // - Func Call参数表传入的参数类型于Func Declaration声明的是否一致
+    else if (instanceof <FuncCallExpression>(expr)) {
+        FuncCallExpression* func_expr = dynamic_cast<FuncCallExpression*>(expr);
+        // 获取func标识符
+        Identifier* func = func_expr->getFunc();
+        // 在符号表里查找func标识符的Declaration, 并转化为FunctionDeclaration*类型
+        FunctionDeclaration* func_decl = dynamic_cast<FunctionDeclaration*>(symbolTable.findSymbol(func->getName()));
+        // 如果func还没被声明过，或者并不是函数声明，此时func_decl都是nullptr
+        if (func_decl == nullptr) {
+            return false;
+        }
+        std::vector<VariableDeclaration*>* originParamList = func_decl->getParamList();
+        std::vector<Expression*>* paramExprList = func_expr->getParamExprList();
+
+    } else {
+        return false;
+    }
+}
