@@ -2,13 +2,13 @@ name: CMake
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, framework/CI ]
   pull_request:
     branches: [ main ]
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  BUILD_TYPE: Release
+  BUILD_TYPE: Debug
 
 jobs:
   build:
@@ -25,7 +25,7 @@ jobs:
     - name: Install llvm
       run: |
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
-        apt-get install libllvm-12-ocaml-dev libllvm12 llvm-12 llvm-12-dev llvm-12-doc llvm-12-examples llvm-12-runtime
+        sudo apt-get install libllvm12 llvm-12 llvm-12-dev llvm-12-runtime
       
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
