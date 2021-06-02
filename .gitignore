@@ -19,3 +19,8 @@ _deps
 */y.tab.hpp
 
 .idea
+
+cmake-build-debug/*
+
+*.cbp
+
