@@ -1,10 +1,10 @@
 #include "parser.h"
 #include "tree/node.h"
 
-#include <llvm/IR/Constants.h>
 #include <iostream>
 #include <string>
 #include <fstream>
+#include "codegen/CodeGen.h"
 
 using namespace std;
 
@@ -113,6 +113,8 @@ int main(int argc, char **argv) {
         cout << "json write to " << jsonFile << endl;
     }
 
+    CodeGen codeGen;
+    codeGen.genCode(programBlock, output_name.compare("") ? output_name : "a.ll");
 
 
     std::cout << "Hello posfol!" << std::endl;
