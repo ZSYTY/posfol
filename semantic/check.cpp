@@ -6,6 +6,7 @@
 #include "sem_util.h"
 #include "symbol.h"
 #include "../tree/type.h"
+#include "check.h"
 
 extern Block* programBlock;
 

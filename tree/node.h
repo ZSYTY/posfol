@@ -162,6 +162,11 @@ class Identifier : public Expression {
         root["name"] = "Identifier: " + (isType ? type_name[type - Type::INT_DEFINE_TYPE] : value);
         return root;
     }
+
+    // TODO:
+    std::string getName() {
+        return std::string();
+    }
 };
 
 /**
@@ -1007,6 +1012,34 @@ public:
         entity != nullptr ? root["children"].push_back(entity->genJSON()) : (void) 0;
         return root;
     }
+};
+
+// TODO:
+class FuncCallExpression : public Expression {
+
+public:
+    Identifier *getFunc() {
+        return nullptr;
+    }
+
+    std::vector<Expression*>* getParamExprList() {
+        return nullptr;
+    }
+};
+
+// TODO:
+class VariableAssign : public AssignExpression {
+
+};
+
+// TODO:
+class ArrayAssign : public AssignExpression {
+
+};
+
+// TODO:
+class ClassAssign : public AssignExpression {
+
 };
 
 #endif
