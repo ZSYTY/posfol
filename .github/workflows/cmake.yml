@@ -2,7 +2,7 @@ name: CMake
 
 on:
   push:
-    branches: [ main, framework/CI ]
+    branches: [ main, framework/CI, feature/codegen ]
   pull_request:
     branches: [ main ]
 
