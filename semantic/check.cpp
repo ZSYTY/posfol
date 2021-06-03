@@ -3,9 +3,9 @@
 #include <vector>
 
 #include "../tree/node.h"
+#include "../tree/type.h"
 #include "sem_util.h"
 #include "symbol.h"
-#include "../tree/type.h"
 
 extern Block* programBlock;
 
