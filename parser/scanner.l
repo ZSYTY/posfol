@@ -110,7 +110,7 @@ RETURN return
 {PUBLIC} { return PUBLIC;}
 {PRIVATE} { return PRIVATE;}
 {IMPLEMENTS} { return IMPLEMENTS;}
-{NEW} { puts("scan new"); return NEW;}
+{NEW} {return NEW;}
 {CLASS} { return CLASS;}
 {INTERFACE} { return INTERFACE;}
 {RETURN} {return RETURN;}

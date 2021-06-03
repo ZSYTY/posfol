@@ -85,7 +85,7 @@ global_stmts_nonempty:
 
 global_stmt:
     function_decl
-|   varible_decl {puts("variable declaration");}
+|   varible_decl {}
 |   class_decl
 |   interface_decl
 ;
@@ -99,11 +99,11 @@ varible_decl:
 
 varible_decl_type:
     BOOL_TYPE {$$ = new Identifier(Type::BOOLEAN_DEFINE_TYPE);}
-|   CHAR_TYPE  {$$ = new Identifier(Type::CHAR_DEFINE_TYPE); puts("char types");}
-|   INT_TYPE  {$$ = new Identifier(Type::INT_DEFINE_TYPE);  puts("int types")}
+|   CHAR_TYPE  {$$ = new Identifier(Type::CHAR_DEFINE_TYPE);}
+|   INT_TYPE  {$$ = new Identifier(Type::INT_DEFINE_TYPE);}
 |   FLOAT_TYPE  {$$ = new Identifier(Type::FLOAT_DEFINE_TYPE); }
 |   FUNC_TYPE  {$$ = new Identifier(Type::FUNC_DEFINE_TYPE); }
-|   VOID_TYPE {$$ = new Identifier(Type::VOID_DEFINE_TYPE); puts("void func type"); }
+|   VOID_TYPE {$$ = new Identifier(Type::VOID_DEFINE_TYPE);}
 |   ID {$$ = new Identifier(Type::CLASS_DEFINE_TYPE, *($1));}
 ;
 
@@ -161,7 +161,6 @@ id_list_nonempty:
 
 args_list:
     /* empty */ {
-        puts("empty args_list");
         $$ = new std::vector<VariableDeclaration*>();
     }
 |   args_list_nonempty
@@ -173,7 +172,6 @@ args_list_nonempty:
         //delete $4;
     }
 |   varible_decl_type ID {
-        puts("args_list_nonempty first one");
         $$ = new std::vector<VariableDeclaration*>();
         $$->push_back(new VariableDeclaration($1, new Identifier(Type::NAME, *($2))));
         //delete $2;
@@ -197,7 +195,7 @@ class_stmts:
     /* empty */ {
         $$ = new Block();
     }
-|   class_stmts_nonempty {puts("class_stmts_nonempty");}
+|   class_stmts_nonempty
 ;
 
 class_stmts_nonempty:
@@ -212,8 +210,8 @@ class_stmts_nonempty:
 
 class_stmt:
     access_label function_decl {$$ = $2;}
-|   access_label varible_decl {$$ = $2;puts("variable declaration");}
-|   access_label construction_decl {$$ = $2; puts("construction declaration");}
+|   access_label varible_decl {$$ = $2;}
+|   access_label construction_decl {$$ = $2;}
 ;
 
 construction_decl:
@@ -224,8 +222,8 @@ construction_decl:
 ;
 
 access_label:
-    PUBLIC {puts("PUBLIC");}
-|   PRIVATE {puts("PRIVATE");}
+    PUBLIC
+|   PRIVATE
 ;
 
 interface_decl:
@@ -262,17 +260,16 @@ function_decl:
     varible_decl_type ID LP args_list RP BEG stmts END {
         $$ = new FunctionDeclaration($1, new Identifier(Type::NAME, *($2)), $4, $7);
         //delete $2;
-        puts("finish function declaration");
     }
 ;
 
 function_decl_type:
     BOOL_TYPE {$$ = new Identifier(Type::BOOLEAN_DEFINE_TYPE); }
 |   CHAR_TYPE  {$$ = new Identifier(Type::CHAR_DEFINE_TYPE); }
-|   INT_TYPE  {$$ = new Identifier(Type::INT_DEFINE_TYPE); puts("int func type"); }
+|   INT_TYPE  {$$ = new Identifier(Type::INT_DEFINE_TYPE);}
 |   FLOAT_TYPE  {$$ = new Identifier(Type::FLOAT_DEFINE_TYPE); }
 |   FUNC_TYPE  {$$ = new Identifier(Type::FUNC_DEFINE_TYPE); }
-|   VOID_TYPE {$$ = new Identifier(Type::VOID_DEFINE_TYPE); puts("void func type"); }
+|   VOID_TYPE {$$ = new Identifier(Type::VOID_DEFINE_TYPE);}
 |   ID {$$ = new Identifier(Type::CLASS_DEFINE_TYPE, *($1));}
 ;
 
@@ -280,7 +277,7 @@ stmts:
     /* empty */ {
         $$ = new Block();
     }
-|   stmts_nonempty {puts("stmts_nonempty");}
+|   stmts_nonempty
 ;
 
 stmts_nonempty:
