@@ -80,7 +80,7 @@ class Block : public Statement {
     Type getType() const override {
         return this->type;
     }
-    std::vector<Statement*>* getStatementList() {
+    std::vector<Statement*>* getStatementList() const {
         return this->statementList;
     }
     json genJSON() const override {
@@ -529,17 +529,18 @@ public:
         return this->type;
     }
 
-    Identifier* getVarType() {
+    Identifier* getVarType() const {
         return this->varType;
     }
 
-    Identifier* getVar() {
+    Identifier* getVar() const {
         return this->var;
     }
-    Expression* getExpr() {
+    Expression* getExpr() const {
         return this->expr;
     }
-    std::vector<Expression*>* getArraySizes() {
+    
+    std::vector<Expression*>* getArraySizes() const {
         return this->arraySizes;
     }
 

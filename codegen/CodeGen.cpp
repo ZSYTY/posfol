@@ -5,80 +5,80 @@
 #include "CodeGen.h"
 
 void CodeGen::genCode(const Block *root, const std::string outputFileName) {
-
+    visit(root);
 }
 
 CodeGen::CodeGen(): module("posfol", llvmContext), irBuilder(llvmContext) {
 
 }
 
-void CodeGen::visit(Statement *stmt) {
+void CodeGen::visit(const Statement *stmt) {
     switch (stmt->getType()) {
         case BLOCK:
-            visit(dynamic_cast<Block *>(stmt));
+            visit(dynamic_cast<const Block *>(stmt));
             break;
         case IDENTIFIER:
-            visit(dynamic_cast<Identifier *>(stmt));
+            visit(dynamic_cast<const Identifier *>(stmt));
             break;
         case ARITHMETICEXPRESSION:
-            visit(dynamic_cast<ArithmeticExpression *>(stmt));
+            visit(dynamic_cast<const ArithmeticExpression *>(stmt));
             break;
         case BINARYOPERATOR:
-            visit(dynamic_cast<BinaryOperator *>(stmt));
+            visit(dynamic_cast<const BinaryOperator *>(stmt));
             break;
         case UNARYOPERATOR:
-            visit(dynamic_cast<UnaryOperator *>(stmt));
+            visit(dynamic_cast<const UnaryOperator *>(stmt));
             break;
         case TYPECONVERTOPERATOR:
-            visit(dynamic_cast<TypeConvertOperator *>(stmt));
+            visit(dynamic_cast<const TypeConvertOperator *>(stmt));
             break;
         case CLASSNEWEXPRESSION:
-            visit(dynamic_cast<ClassNewExpression *>(stmt));
+            visit(dynamic_cast<const ClassNewExpression *>(stmt));
             break;
         case ENTITYEXPRESSION:
-            visit(dynamic_cast<Entity *>(stmt));
+            visit(dynamic_cast<const Entity *>(stmt));
             break;
         case VARIABLEDECLARATION:
-            visit(dynamic_cast<VariableDeclaration *>(stmt));
+            visit(dynamic_cast<const VariableDeclaration *>(stmt));
             break;
         case LAMBDADECLARATION:
-            visit(dynamic_cast<LambdaExpression *>(stmt));
+            visit(dynamic_cast<const LambdaExpression *>(stmt));
             break;
         case FUNCTIONDECLARATION:
-            visit(dynamic_cast<FunctionDeclaration *>(stmt));
+            visit(dynamic_cast<const FunctionDeclaration *>(stmt));
             break;
         case CLASSDECLARATION:
-            visit(dynamic_cast<ClassDeclaration *>(stmt));
+            visit(dynamic_cast<const ClassDeclaration *>(stmt));
             break;
         case INTERFACEDECLARATION:
-            visit(dynamic_cast<InterfaceDeclaration *>(stmt));
+            visit(dynamic_cast<const InterfaceDeclaration *>(stmt));
             break;
         case IFSTATEMENT:
-            visit(dynamic_cast<IfStatement *>(stmt));
+            visit(dynamic_cast<const IfStatement *>(stmt));
             break;
         case FORSTATEMENT:
-            visit(dynamic_cast<ForStatement *>(stmt));
+            visit(dynamic_cast<const ForStatement *>(stmt));
             break;
         case WHILESTATEMENT:
-            visit(dynamic_cast<WhileStatement *>(stmt));
+            visit(dynamic_cast<const WhileStatement *>(stmt));
             break;
         case RETURNSTATEMENT:
-            visit(dynamic_cast<ReturnStatement *>(stmt));
+            visit(dynamic_cast<const ReturnStatement *>(stmt));
             break;
         case IOSTATEMENT:
-            visit(dynamic_cast<IOStatement *>(stmt));
+            visit(dynamic_cast<const IOStatement *>(stmt));
             break;
         case FUNCCALLEXPRESSION:
-            visit(dynamic_cast<FuncCallExpression *>(stmt));
+            visit(dynamic_cast<const FuncCallExpression *>(stmt));
             break;
         case VARIABLEASSIGN:
-            visit(dynamic_cast<VariableAssign* >(stmt));
+            visit(dynamic_cast<const VariableAssign* >(stmt));
             break;
         case ARRAYASSIGN:
-            visit(dynamic_cast<ArrayAssign *>(stmt));
+            visit(dynamic_cast<const ArrayAssign *>(stmt));
             break;
         case CLASSASSIGN:
-            visit(dynamic_cast<ClassAssign *>(stmt));
+            visit(dynamic_cast<const ClassAssign *>(stmt));
             break;
         case NODE:
             break;
@@ -129,92 +129,144 @@ void CodeGen::visit(Statement *stmt) {
     }
 }
 
-void CodeGen::visit(Block *block) {
+void CodeGen::visit(const Block *block) {
     for (auto stmt : *block->getStatementList()) {
         visit(stmt);
     }
 }
 
-void CodeGen::visit(Identifier *) {
+void CodeGen::visit(const Identifier *) {
 
 }
 
-void CodeGen::visit(ArithmeticExpression *) {
+void CodeGen::visit(const ArithmeticExpression *) {
 
 }
 
-void CodeGen::visit(BinaryOperator *) {
+void CodeGen::visit(const BinaryOperator *) {
 
 }
 
-void CodeGen::visit(UnaryOperator *) {
+void CodeGen::visit(const UnaryOperator *) {
 
 }
 
-void CodeGen::visit(TypeConvertOperator *) {
+void CodeGen::visit(const TypeConvertOperator *) {
 
 }
 
-void CodeGen::visit(ClassNewExpression *) {
+void CodeGen::visit(const ClassNewExpression *) {
 
 }
 
-void CodeGen::visit(Entity *) {
+void CodeGen::visit(const Entity *) {
 
 }
 
-void CodeGen::visit(VariableDeclaration * variableDeclaration) {
+void CodeGen::visit(const VariableDeclaration * variableDeclaration) {
+    auto varType = variableDeclaration->getVarType()->getType();
+    auto expression = variableDeclaration->getExpr();
+    // TODO: calculate the expression
+    auto expressionResult = 0;
+    llvm::Constant *constant = nullptr;
+    llvm::Value *value = nullptr;
+    auto arraySizes = variableDeclaration->getArraySizes();
+    if (arraySizes) {
+        // TODO:
+        /* Define an array */
+    } else {
+        switch (varType) {
+            case INT_DEFINE_TYPE:
+                constant = llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext),
+                                                  expression ? expressionResult : 0);
+                value = irBuilder.CreateAlloca(llvm::Type::getInt32Ty(llvmContext));
+                break;
+            case LONG_DEFINE_TYPE:
+                constant = llvm::ConstantInt::get(llvm::Type::getInt64Ty(llvmContext),
+                                                  expression ? expressionResult : 0);
+                value = irBuilder.CreateAlloca(llvm::Type::getInt64Ty(llvmContext));
+                break;
+            case FLOAT_DEFINE_TYPE:
+                constant = llvm::ConstantFP::get(llvm::Type::getFloatTy(llvmContext),
+                                                 expression ? expressionResult : 0);
+                value = irBuilder.CreateAlloca(llvm::Type::getFloatTy(llvmContext));
+                break;
+            case DOUBLE_DEFINE_TYPE:
+                constant = llvm::ConstantFP::get(llvm::Type::getDoubleTy(llvmContext),
+                                                 expression ? expressionResult : 0);
+                value = irBuilder.CreateAlloca(llvm::Type::getDoubleTy(llvmContext));
+                break;
+            case BOOLEAN_DEFINE_TYPE:
+                constant = llvm::ConstantInt::get(llvm::Type::getInt1Ty(llvmContext),
+                                                  expression ? expressionResult : 0);
+                value = irBuilder.CreateAlloca(llvm::Type::getInt1Ty(llvmContext));
+                break;
+            case CHAR_DEFINE_TYPE:
+                constant = llvm::ConstantInt::get(llvm::Type::getInt8Ty(llvmContext),
+                                                  expression ? expressionResult : 0);
+                value = irBuilder.CreateAlloca(llvm::Type::getInt8Ty(llvmContext));
+                break;
+            default:
+                break;
+        }
+    }
+    if (value) {
+        value->setName(variableDeclaration->getVar()->getValue());
+        if (constant) {
+            irBuilder.CreateStore(constant, value);
+        }
+    }
 
 }
 
-void CodeGen::visit(LambdaExpression *) {
+void CodeGen::visit(const LambdaExpression *) {
 
 }
 
-void CodeGen::visit(FunctionDeclaration *) {
+void CodeGen::visit(const FunctionDeclaration *) {
 
 }
 
-void CodeGen::visit(ClassDeclaration *) {
+void CodeGen::visit(const ClassDeclaration *) {
 
 }
 
-void CodeGen::visit(InterfaceDeclaration *) {
+void CodeGen::visit(const InterfaceDeclaration *) {
 
 }
 
-void CodeGen::visit(IfStatement *) {
+void CodeGen::visit(const IfStatement *) {
 
 }
 
-void CodeGen::visit(ForStatement *) {
+void CodeGen::visit(const ForStatement *) {
 
 }
 
-void CodeGen::visit(WhileStatement *) {
+void CodeGen::visit(const WhileStatement *) {
 
 }
 
-void CodeGen::visit(ReturnStatement *) {
+void CodeGen::visit(const ReturnStatement *) {
 
 }
 
-void CodeGen::visit(IOStatement *) {
+void CodeGen::visit(const IOStatement *) {
 
 }
 
-void CodeGen::visit(FuncCallExpression *) {
+void CodeGen::visit(const FuncCallExpression *) {
 
 }
 
-void CodeGen::visit(VariableAssign *) {
+void CodeGen::visit(const VariableAssign *) {
 
 }
 
-void CodeGen::visit(ArrayAssign *) {
+void CodeGen::visit(const ArrayAssign *) {
 
 }
 
-void CodeGen::visit(ClassAssign *) {
+void CodeGen::visit(const ClassAssign *) {
 
 }

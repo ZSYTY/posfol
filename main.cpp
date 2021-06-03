@@ -31,7 +31,7 @@ ParseArgException get_args(int argc, char **argv) {
 
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-o") == 0) {
-            if (output_name != "") {
+            if (! output_name.empty()) {
                 std::cout << "more than one output file name is specified" << std::endl;
                 return ParseArgException::ERROR;
             } else if (i + 1 < argc) {
@@ -69,7 +69,7 @@ ParseArgException get_args(int argc, char **argv) {
             std::cout << "help" << std::endl;
             return ParseArgException::HELP;
         } else {
-            if (input_name == "") {
+            if (input_name.empty()) {
                 input_name = argv[i];
             } else {
                 std::cout << "more than one input file is specified" << std::endl;
@@ -77,7 +77,7 @@ ParseArgException get_args(int argc, char **argv) {
             }
         }
     }
-    if (input_name == "") {
+    if (input_name.empty()) {
         std::cout << "no input file is specified" << std::endl;
         return ParseArgException::ERROR;
     }
@@ -114,7 +114,7 @@ int main(int argc, char **argv) {
     }
 
     CodeGen codeGen;
-    codeGen.genCode(programBlock, output_name.compare("") ? output_name : "a.ll");
+    codeGen.genCode(programBlock, output_name.empty() ? "a.ll" : output_name);
 
 
     std::cout << "Hello posfol!" << std::endl;

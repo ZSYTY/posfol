@@ -4,7 +4,7 @@
 
 #ifndef POSFOL_TOKEN_H
 #define POSFOL_TOKEN_H
-#include <stdio.h>
+#include <cstdio>
 typedef enum
 {
     T_LP = 0,
@@ -109,7 +109,7 @@ const char *token_names[] = {
         "MINUS_ASSIGN",
         "MULTIPLE_ASSIGN",
         "DIV_ASSIGN",
-        "MOD_ASSIGN"
+        "MOD_ASSIGN",
         "PUBLIC",
         "PRIVATE",
         "IMPLEMENTS",
