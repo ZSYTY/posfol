@@ -242,7 +242,7 @@ class BinaryOperator : public ArithmeticExpression {
  */
 class UnaryOperator : public ArithmeticExpression {
 private:
-    Type type = BINARYOPERATOR;
+    Type type = UNARYOPERATOR;
     int op = -1;
     Expression* hs = nullptr;
 
@@ -265,7 +265,7 @@ public:
     }
     json genJSON() const override {
         json root;
-        std::string op_name[] = {"!", "-"};
+        std::string op_name[] = {"-", "!"};
         root["name"] = "UnaryOperator" + (op != -1 ? op_name[op] : "");
         root["children"].push_back(hs->genJSON());
         return root;
