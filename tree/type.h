@@ -48,9 +48,9 @@ enum Type {
     TYPE,
     NAME,
     VALUE,
-    FUNCTION,
-    CLASS,
-    INTERFACE,
+    FUNCTION_REAL,
+    CLASS_REAL,
+    INTERFACE_REAL,
 
     ERROR
 };

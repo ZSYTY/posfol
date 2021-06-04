@@ -47,7 +47,7 @@ bool checkBlock(Block* root) {
         }
     }
     // block的type等于最后一条stmt的type
-    nodeTypeMap[root] = nodeTypeMap[stmts[stmts->size() - 1]];
+    nodeTypeMap[root] = nodeTypeMap[(*stmts)[stmts->size() - 1]];
     symbolTable.popAR();
 }
 
@@ -66,7 +66,7 @@ bool checkDeclaration(Declaration* decl) {
         }
         // int a;
         if (var->getExpr() == nullptr && var->getArraySizes() == nullptr) {
-            ;
+            return true;
         }
         // int a = expr;
         else if (var->getExpr() != nullptr) {
@@ -138,6 +138,7 @@ bool checkDeclaration(Declaration* decl) {
         }
         nodeTypeMap[clz] = CLASS_DEFINE_TYPE;
         symbolTable.push(name, clz);
+        return true;
     } else {
         return false;
     }

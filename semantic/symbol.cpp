@@ -20,11 +20,11 @@ Type SymbolTable::getSymbolType(std::string name) {
             VariableDeclaration* var = dynamic_cast<VariableDeclaration*>(decl);
             return var->getVarType()->getType();
         } else if (instanceof <FunctionDeclaration>(decl)) {
-            return FUNCTION;
+            return FUNCTION_REAL;
         } else if (instanceof <ClassDeclaration>(decl)) {
-            return CLASS;
+            return CLASS_REAL;
         } else if (instanceof <InterfaceDeclaration>(decl)) {
-            return INTERFACE;
+            return INTERFACE_REAL;
         } else {
             return ERROR;
         }
