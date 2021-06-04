@@ -109,11 +109,7 @@ const char *token_names[] = {
         "MINUS_ASSIGN",
         "MULTIPLE_ASSIGN",
         "DIV_ASSIGN",
-<<<<<<< HEAD
-        "MOD_ASSIGN"
-=======
         "MOD_ASSIGN",
->>>>>>> feature/codegen
         "PUBLIC",
         "PRIVATE",
         "IMPLEMENTS",
