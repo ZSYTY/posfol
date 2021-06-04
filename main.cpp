@@ -1,10 +1,10 @@
-#include "parser.h"
+#include "parser/parser.h"
 #include "tree/node.h"
 
-#include <llvm/IR/Constants.h>
 #include <iostream>
 #include <string>
 #include <fstream>
+#include "codegen/CodeGen.h"
 
 using namespace std;
 
@@ -31,7 +31,11 @@ ParseArgException get_args(int argc, char **argv) {
 
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-o") == 0) {
+<<<<<<< HEAD
             if (output_name != "") {
+=======
+            if (! output_name.empty()) {
+>>>>>>> feature/codegen
                 std::cout << "more than one output file name is specified" << std::endl;
                 return ParseArgException::ERROR;
             } else if (i + 1 < argc) {
@@ -69,7 +73,11 @@ ParseArgException get_args(int argc, char **argv) {
             std::cout << "help" << std::endl;
             return ParseArgException::HELP;
         } else {
+<<<<<<< HEAD
             if (input_name == "") {
+=======
+            if (input_name.empty()) {
+>>>>>>> feature/codegen
                 input_name = argv[i];
             } else {
                 std::cout << "more than one input file is specified" << std::endl;
@@ -77,7 +85,11 @@ ParseArgException get_args(int argc, char **argv) {
             }
         }
     }
+<<<<<<< HEAD
     if (input_name == "") {
+=======
+    if (input_name.empty()) {
+>>>>>>> feature/codegen
         std::cout << "no input file is specified" << std::endl;
         return ParseArgException::ERROR;
     }
@@ -113,6 +125,11 @@ int main(int argc, char **argv) {
         cout << "json write to " << jsonFile << endl;
     }
 
+<<<<<<< HEAD
+=======
+    CodeGen codeGen;
+    codeGen.genCode(programBlock, output_name.empty() ? "a.ll" : output_name);
+>>>>>>> feature/codegen
 
 
     std::cout << "Hello posfol!" << std::endl;

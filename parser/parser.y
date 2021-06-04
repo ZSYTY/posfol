@@ -100,7 +100,7 @@ varible_decl:
 varible_decl_type:
     BOOL_TYPE {$$ = new Identifier(Type::BOOLEAN_DEFINE_TYPE);}
 |   CHAR_TYPE  {$$ = new Identifier(Type::CHAR_DEFINE_TYPE); puts("char types");}
-|   INT_TYPE  {$$ = new Identifier(Type::INT_DEFINE_TYPE);  puts("int types")}
+|   INT_TYPE  {$$ = new Identifier(Type::INT_DEFINE_TYPE);  puts("int types");}
 |   FLOAT_TYPE  {$$ = new Identifier(Type::FLOAT_DEFINE_TYPE); }
 |   FUNC_TYPE  {$$ = new Identifier(Type::FUNC_DEFINE_TYPE); }
 |   VOID_TYPE {$$ = new Identifier(Type::VOID_DEFINE_TYPE); puts("void func type"); }
