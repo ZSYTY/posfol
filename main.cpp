@@ -113,7 +113,7 @@ int main(int argc, char **argv) {
         cout << "json write to " << jsonFile << endl;
     }
 
-    check(programBlock);
+    checkProgram(programBlock);
 
     CodeGen codeGen;
     codeGen.genCode(programBlock, output_name.empty() ? "a.ll" : output_name);
