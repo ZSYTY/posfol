@@ -1,6 +1,6 @@
 #include "parser/parser.h"
 #include "tree/node.h"
-
+#include "semantic/check.h"
 #include <iostream>
 #include <string>
 #include <fstream>
@@ -112,6 +112,8 @@ int main(int argc, char **argv) {
         astJSON.close();
         cout << "json write to " << jsonFile << endl;
     }
+
+    check(programBlock);
 
     CodeGen codeGen;
     codeGen.genCode(programBlock, output_name.empty() ? "a.ll" : output_name);

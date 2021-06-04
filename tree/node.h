@@ -1010,32 +1010,4 @@ public:
     }
 };
 
-// TODO:
-class FuncCallExpression : public Expression {
-
-public:
-    Identifier *getFunc() {
-        return nullptr;
-    }
-
-    std::vector<Expression*>* getParamExprList() {
-        return nullptr;
-    }
-};
-
-// TODO:
-class VariableAssign : public AssignExpression {
-
-};
-
-// TODO:
-class ArrayAssign : public AssignExpression {
-
-};
-
-// TODO:
-class ClassAssign : public AssignExpression {
-
-};
-
 #endif

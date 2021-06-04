@@ -53,10 +53,6 @@ class CodeGen {
     void visit(const WhileStatement *);
     void visit(const ReturnStatement *);
     void visit(const IOStatement *);
-    void visit(const FuncCallExpression *);
-    void visit(const VariableAssign *);
-    void visit(const ArrayAssign *);
-    void visit(const ClassAssign *);
 public:
     CodeGen();
 

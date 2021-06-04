@@ -68,18 +68,6 @@ void CodeGen::visit(const Statement *stmt) {
         case IOSTATEMENT:
             visit(dynamic_cast<const IOStatement *>(stmt));
             break;
-        case FUNCCALLEXPRESSION:
-            visit(dynamic_cast<const FuncCallExpression *>(stmt));
-            break;
-        case VARIABLEASSIGN:
-            visit(dynamic_cast<const VariableAssign* >(stmt));
-            break;
-        case ARRAYASSIGN:
-            visit(dynamic_cast<const ArrayAssign *>(stmt));
-            break;
-        case CLASSASSIGN:
-            visit(dynamic_cast<const ClassAssign *>(stmt));
-            break;
         case NODE:
             break;
         case EXPRESSION:
@@ -252,21 +240,5 @@ void CodeGen::visit(const ReturnStatement *) {
 }
 
 void CodeGen::visit(const IOStatement *) {
-
-}
-
-void CodeGen::visit(const FuncCallExpression *) {
-
-}
-
-void CodeGen::visit(const VariableAssign *) {
-
-}
-
-void CodeGen::visit(const ArrayAssign *) {
-
-}
-
-void CodeGen::visit(const ClassAssign *) {
 
 }
