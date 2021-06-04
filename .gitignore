@@ -12,6 +12,8 @@ _deps
 .DS_store
 */.DS_store
 
+cmake-build-debug/*
+
 */lex.yy.c
 */y.tab.c
 */y.tab.cpp
