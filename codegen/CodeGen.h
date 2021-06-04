@@ -23,7 +23,7 @@
 #include <llvm/Support/FormattedStream.h>
 #include <llvm/Support/MathExtras.h>
 #include <string>
-#include "symbol.h"
+#include "../semantic/symbol.h"
 
 class CodeGen {
     llvm::LLVMContext llvmContext;
