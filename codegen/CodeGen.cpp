@@ -35,63 +35,63 @@ CodeGen::CodeGen(): module("posfol", llvmContext), irBuilder(llvmContext) {
 llvm::Value *CodeGen::visit(const Statement *stmt) {
     switch (stmt->getType()) {
         case BLOCK:
-            visit(dynamic_cast<const Block *>(stmt));
+            return visit(dynamic_cast<const Block *>(stmt));
             break;
         case IDENTIFIER:
-            visit(dynamic_cast<const Identifier *>(stmt));
+            return visit(dynamic_cast<const Identifier *>(stmt));
             break;
         case ARITHMETICEXPRESSION:
-            visit(dynamic_cast<const ArithmeticExpression *>(stmt));
+            return visit(dynamic_cast<const ArithmeticExpression *>(stmt));
             break;
         case BINARYOPERATOR:
-            visit(dynamic_cast<const BinaryOperator *>(stmt));
+            return visit(dynamic_cast<const BinaryOperator *>(stmt));
             break;
         case UNARYOPERATOR:
-            visit(dynamic_cast<const UnaryOperator *>(stmt));
+            return visit(dynamic_cast<const UnaryOperator *>(stmt));
             break;
         case TYPECONVERTOPERATOR:
-            visit(dynamic_cast<const TypeConvertOperator *>(stmt));
+            return visit(dynamic_cast<const TypeConvertOperator *>(stmt));
             break;
         case CLASSNEWEXPRESSION:
-            visit(dynamic_cast<const ClassNewExpression *>(stmt));
+            return visit(dynamic_cast<const ClassNewExpression *>(stmt));
             break;
         case ENTITYEXPRESSION:
-            visit(dynamic_cast<const Entity *>(stmt));
+            return visit(dynamic_cast<const Entity *>(stmt));
             break;
         case VARIABLEDECLARATION:
-            visit(dynamic_cast<const VariableDeclaration *>(stmt));
+            return visit(dynamic_cast<const VariableDeclaration *>(stmt));
             break;
         case LAMBDADECLARATION:
-            visit(dynamic_cast<const LambdaExpression *>(stmt));
+            return visit(dynamic_cast<const LambdaExpression *>(stmt));
             break;
         case FUNCTIONDECLARATION:
-            visit(dynamic_cast<const FunctionDeclaration *>(stmt));
+            return visit(dynamic_cast<const FunctionDeclaration *>(stmt));
             break;
         case CLASSDECLARATION:
-            visit(dynamic_cast<const ClassDeclaration *>(stmt));
+            return visit(dynamic_cast<const ClassDeclaration *>(stmt));
             break;
         case INTERFACEDECLARATION:
-            visit(dynamic_cast<const InterfaceDeclaration *>(stmt));
+            return visit(dynamic_cast<const InterfaceDeclaration *>(stmt));
             break;
         case IFSTATEMENT:
-            visit(dynamic_cast<const IfStatement *>(stmt));
+            return visit(dynamic_cast<const IfStatement *>(stmt));
             break;
         case FORSTATEMENT:
-            visit(dynamic_cast<const ForStatement *>(stmt));
+            return visit(dynamic_cast<const ForStatement *>(stmt));
             break;
         case WHILESTATEMENT:
-            visit(dynamic_cast<const WhileStatement *>(stmt));
+            return visit(dynamic_cast<const WhileStatement *>(stmt));
             break;
         case RETURNSTATEMENT:
-            visit(dynamic_cast<const ReturnStatement *>(stmt));
+            return visit(dynamic_cast<const ReturnStatement *>(stmt));
             break;
         case IOSTATEMENT:
-            visit(dynamic_cast<const IOStatement *>(stmt));
+            return visit(dynamic_cast<const IOStatement *>(stmt));
             break;
         case NODE:
             break;
         case EXPRESSION:
-            visit(dynamic_cast<const Expression *>(stmt));
+            return visit(dynamic_cast<const Expression *>(stmt));
             break;
         case CLASSEXPRESSION:
             break;
@@ -100,7 +100,7 @@ llvm::Value *CodeGen::visit(const Statement *stmt) {
         case CLASSFUNCEXPRESSION:
             break;
         case ASSIGNEXPRESSION:
-            visit(dynamic_cast<const AssignExpression *>(stmt));
+            return visit(dynamic_cast<const AssignExpression *>(stmt));
             break;
         case DECLARATION:
             break;
@@ -145,21 +145,19 @@ llvm::Value *CodeGen::visit(const Block *block) {
     }
 }
 
-llvm::Value *CodeGen::visit(const Identifier *) {
-
+llvm::Value *CodeGen::visit(const Identifier *identifier) {
+    assert(! identifier->getIsType());
+    return llvmSymbolTable[symbolTable.top()[identifier->getValue()]];
 }
 
 llvm::Value *CodeGen::visit(const ArithmeticExpression *arithmeticExpression) {
     switch (arithmeticExpression->getType()) {
         case BINARYOPERATOR:
             return visit(dynamic_cast<const BinaryOperator *>(arithmeticExpression));
-            break;
         case UNARYOPERATOR:
             return visit(dynamic_cast<const UnaryOperator *>(arithmeticExpression));
-            break;
         case TYPECONVERTOPERATOR:
             return visit(dynamic_cast<const TypeConvertOperator *>(arithmeticExpression));
-            break;
     }
 }
 
@@ -223,8 +221,16 @@ llvm::Value *CodeGen::visit(const ClassNewExpression *) {
 
 }
 
-llvm::Value *CodeGen::visit(const Entity *) {
-
+llvm::Value *CodeGen::visit(const Entity *entity) {
+    if (entity->getIsTerminal()) {
+        return visit(entity->getIdentifier());
+    } else if (entity->getIsArrayIndex()) {
+        // TODO:
+    } else if (entity->getIsFunctionCall()) {
+        // TODO:
+    } else if (entity->getIsObjectCall()) {
+        // TODO:
+    }
 }
 
 llvm::Value *CodeGen::visit(const VariableDeclaration * variableDeclaration) {
@@ -275,6 +281,7 @@ llvm::Value *CodeGen::visit(const VariableDeclaration * variableDeclaration) {
             irBuilder.CreateStore(constant, value);
         }
         symbolTable.push(name, variableDeclaration);
+        llvmSymbolTable[variableDeclaration] = value;
     }
     return value;
 }
@@ -285,6 +292,7 @@ llvm::Value *CodeGen::visit(const LambdaExpression *) {
 
 llvm::Value *CodeGen::visit(const FunctionDeclaration *functionDeclaration) {
     std::string name = functionDeclaration->getFunc()->getValue();
+    llvm::Function *function = nullptr;
     if (name == "main") {
         genMainFunctionContext();
         hasVisitedMainFunction = true;
@@ -293,11 +301,13 @@ llvm::Value *CodeGen::visit(const FunctionDeclaration *functionDeclaration) {
         for (auto item : *functionDeclaration->getParamList()) {
             args.push_back(getType(item->getType()));
         }
-        llvm::Function *function = genCFunction(name, getType(functionDeclaration->getReturnType()->getType()), args, false);
+        function = genCFunction(name, getType(functionDeclaration->getReturnType()->getType()), args, false);
         genFunctionContext(name, function);
+        llvmSymbolTable[functionDeclaration] = function;
     }
     visit(functionDeclaration->getFuncBlock());
     endFunctionOrBlock();
+    return function;
 }
 
 llvm::Value *CodeGen::visit(const ClassDeclaration *) {

@@ -33,6 +33,8 @@ class CodeGen {
     SymbolTable symbolTable;
     bool hasVisitedMainFunction = false;
     std::stack<llvm::BasicBlock *> blockStack;
+    std::unordered_map<const Declaration*, llvm::Value *> llvmSymbolTable;
+//    std::unordered_map<const Declaration*, llvm::Function *> llvmFunctionTable;
 
     llvm::Value *visit(const Statement *);
     llvm::Value *visit(const Block *);

@@ -389,19 +389,31 @@ class Entity : public Expression {
         }
     }
 
-    bool getIsTerminal() {
+    bool getIsObjectCall() const {
+        return objectCall;
+    }
+
+    bool getIsArrayIndex() const {
+        return arrayIndex;
+    }
+
+    bool getIsFunctionCall() const {
+        return functionCall;
+    }
+
+    bool getIsTerminal() const {
         return isTerminal;
     }
-    Entity* getEntity() {
+    Entity* getEntity() const {
         return entity;
     }
-    Identifier* getIdentifier() {
+    Identifier* getIdentifier() const {
         return identifier;
     }
-    Expression* getExpression() {
+    Expression* getExpression() const {
         return expression;
     }
-    std::vector<Expression*>* getVectorExpression() {
+    std::vector<Expression*>* getVectorExpression() const {
         return vectorExpression;
     }
 
