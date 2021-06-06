@@ -378,12 +378,17 @@ llvm::Value *CodeGen::visit(const FunctionDeclaration *functionDeclaration) {
     } else {
         std::vector<llvm::Type *> args;
         for (auto item : *functionDeclaration->getParamList()) {
-            args.push_back(getType(item->getType()));
-            visit(item);
+            args.push_back(getType(item->getVarType()->getType()));
         }
         function = genCFunction(name, getType(functionDeclaration->getReturnType()->getType()), args, false);
         genFunctionContext(name, function);
         llvmSymbolTable[functionDeclaration] = function;
+        int idx = 0;
+        for (auto &argItem : function->args()) {
+            auto varDeclaration = functionDeclaration->getParamList()->at(idx++);
+            argItem.setName(varDeclaration->getVar()->getValue());
+            irBuilder.CreateStore(&argItem, visit(varDeclaration));
+        }
     }
     visit(functionDeclaration->getFuncBlock());
     endFunctionOrBlock();
