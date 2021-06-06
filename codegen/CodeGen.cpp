@@ -385,7 +385,20 @@ llvm::Value *CodeGen::visit(const InterfaceDeclaration *) {
 }
 
 llvm::Value *CodeGen::visit(const IfStatement *ifStatement) {
-    return irBuilder.CreateCondBr(CastToBoolean(llvmContext, visit(ifStatement->getCondition())), visit(ifStatement->getTrueBlock()), visit(ifStatement->getFalseBlock()));
+    llvm::Value* condValue = visit(ifStatement->getCondition());
+    llvm::Value* trueBlock = visit(ifStatement->getTrueBlock());
+    llvm::Value* falseBlock = visit(ifStatement->getFalseBlock());
+    if(falseBlock) {
+        return irBuilder.CreateCondBr(CastToBoolean(llvmContext, condValue), trueBlock, falseBlock);
+    } else {
+        llvm::Function* theFunction = irBuilder.GetInsertBlock()->getParent();
+        llvm::BasicBlock* after = llvm::BasicBlock::Create(llvmContext, "false");
+        irBuilder.CreateCondBr(CastToBoolean(llvmContext, condValue), trueBlock, after);
+        // 插入after block
+        theFunction->getBasicBlockList().push_back(after);
+        irBuilder.SetInsertPoint(after);
+        return after;
+    }
 }
 
 llvm::Value *CodeGen::visit(const ForStatement * forStatement) {
