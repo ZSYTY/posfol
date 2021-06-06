@@ -144,7 +144,48 @@ bool checkDeclaration(Declaration* decl) {
     }
 }
 
+/**
+ * @author gehao
+ * 
+ * 检查Expression是否正确 
+ */
 bool checkExpression(Expression* expr) {
+    if (instanceof <Identifier>(expr)) {
+        return true;
+    } else if (instanceof <ClassNewExpression>(expr)) {
+        ClassNewExpression* clzNew = dynamic_cast<ClassNewExpression*>(expr);
+        std::string name = clzNew->getClassName()->getValue();
+        // 如果类还没被声明或没有被定义，则编译错误
+        ClassDeclaration* clzDecl = dynamic_cast<ClassDeclaration*>(symbolTable.findSymbol(name));
+        if (clzDecl == nullptr || clzDecl->getClassBlock() == nullptr) {
+            return false;
+        }
+        // TODO: 判断构造函数的参数表类型是否正确？
+        std::vector<Expression*>* paramExprList = clzNew->getParamExprList();
+        for (Expression* expr : *paramExprList) {
+            if (!checkExpression(expr)) {
+                return false;
+            }
+        }
+        nodeTypeMap[clzNew] = CLASS_DEFINE_TYPE;
+        return true;
+    } else if (instanceof <Entity>(expr)) {
+        ;
+    } else if (instanceof <AssignExpression>(expr)) {
+        ;
+    } else if (instanceof <LambdaExpression>(expr)) {
+        ;
+    } else if (instanceof <ArithmeticExpression>(expr)) {
+        if (instanceof <BinaryOperator>(expr)) {
+            ;
+        } else if (instanceof <UnaryOperator>(expr)) {
+            ;
+        } else if (instanceof <TypeConvertOperator>(expr)) {
+            ;
+        } else {
+            return false;
+        }
+    }
     return true;
 }
 bool checkLogicStatement(LogicStatement* logic) {
