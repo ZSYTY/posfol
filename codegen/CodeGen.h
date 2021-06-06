@@ -40,14 +40,14 @@ class CodeGen {
 
     llvm::Value *visit(const Statement *);
     llvm::BasicBlock *visit(const Block *);
-    llvm::Value *visit(const Expression *);
-    llvm::Value *visit(const Identifier *);
+    llvm::Value *visit(const Expression *, bool deref = false);
+    llvm::Value *visit(const Identifier *, bool deref = false);
     llvm::Value *visit(const ArithmeticExpression *);
     llvm::Value *visit(const BinaryOperator *);
     llvm::Value *visit(const UnaryOperator *);
     llvm::Value *visit(const TypeConvertOperator *);
     llvm::Value *visit(const ClassNewExpression *);
-    llvm::Value *visit(const Entity *);
+    llvm::Value *visit(const Entity *, bool deref = false);
     llvm::Value *visit(const AssignExpression *);
 //    llvm::Value *visit(const Declaration *);
     llvm::Value *visit(const VariableDeclaration *);
@@ -68,6 +68,7 @@ class CodeGen {
     void genMainFunctionContext();
     llvm::Function *genCFunction(const std::string &name,
                              llvm::Type *returnType, const std::vector<llvm::Type *> &args, bool varLen);
+
     // LambdaFunction *genCFunction(const std::string &name,
                                 //  llvm::Type *returnType, const std::vector<llvm::Type *> &args, const std::vector<llvm::Value*> &outArgs, bool varLen);
     void genFunctionContext(const std::string &name, llvm::Function *function);
@@ -76,6 +77,7 @@ class CodeGen {
     llvm::Type *getType(Type);
     std::string getFmtStr(llvm::Type *);
     llvm::Value* CastToBoolean(llvm::LLVMContext& context, llvm::Value* condValue);
+    llvm::Constant *genConstant(const Identifier *);
 public:
     CodeGen();
 
