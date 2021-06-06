@@ -156,7 +156,7 @@ bool checkExpression(Expression* expr) {
         ClassNewExpression* clzNew = dynamic_cast<ClassNewExpression*>(expr);
         std::string name = clzNew->getClassName()->getValue();
         // 如果类还没被声明或没有被定义，则编译错误
-        ClassDeclaration* clzDecl = dynamic_cast<ClassDeclaration*>(symbolTable.findSymbol(name));
+        const ClassDeclaration* clzDecl = dynamic_cast<const ClassDeclaration*>(symbolTable.findSymbol(name));
         if (clzDecl == nullptr || clzDecl->getClassBlock() == nullptr) {
             return false;
         }

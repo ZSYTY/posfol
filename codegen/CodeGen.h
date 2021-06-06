@@ -68,13 +68,14 @@ class CodeGen {
     void genMainFunctionContext();
     llvm::Function *genCFunction(const std::string &name,
                              llvm::Type *returnType, const std::vector<llvm::Type *> &args, bool varLen);
-    LambdaFunction *genCFunction(const std::string &name,
-                                 llvm::Type *returnType, const std::vector<llvm::Type *> &args, const std::vector<llvm::Value*> &outArgs, bool varLen);
+    // LambdaFunction *genCFunction(const std::string &name,
+                                //  llvm::Type *returnType, const std::vector<llvm::Type *> &args, const std::vector<llvm::Value*> &outArgs, bool varLen);
     void genFunctionContext(const std::string &name, llvm::Function *function);
     void endFunctionOrBlock();
 
     llvm::Type *getType(Type);
     std::string getFmtStr(llvm::Type *);
+    llvm::Value* CastToBoolean(llvm::LLVMContext& context, llvm::Value* condValue);
 public:
     CodeGen();
 

@@ -4,6 +4,20 @@
 
 #include "CodeGen.h"
 
+#define ISTYPE(value, id) (value->getType()->getTypeID() == id)
+
+llvm::Value* CodeGen::CastToBoolean(llvm::LLVMContext& context, llvm::Value* condValue){
+    if(ISTYPE(condValue, llvm::Type::IntegerTyID)){
+        condValue = irBuilder.CreateIntCast(condValue, llvm::Type::getInt1Ty(context), true);
+        return irBuilder.CreateICmpNE(condValue, llvm::ConstantInt::get(llvm::Type::getInt1Ty(context), 0, true));
+    }else if(ISTYPE(condValue, llvm::Type::DoubleTyID)){
+        return irBuilder.CreateFCmpONE(condValue, llvm::ConstantFP::get(context, llvm::APFloat(0.0)));
+    }else{
+        return condValue;
+    }
+}
+
+
 void CodeGen::init(const std::string& inputFileName) {
 
 }
@@ -371,7 +385,7 @@ llvm::Value *CodeGen::visit(const InterfaceDeclaration *) {
 }
 
 llvm::Value *CodeGen::visit(const IfStatement *ifStatement) {
-    return irBuilder.CreateCondBr(visit(ifStatement->getCondition()), visit(ifStatement->getTrueBlock()), visit(ifStatement->getFalseBlock()));
+    return irBuilder.CreateCondBr(CastToBoolean(llvmContext, visit(ifStatement->getCondition())), visit(ifStatement->getTrueBlock()), visit(ifStatement->getFalseBlock()));
 }
 
 llvm::Value *CodeGen::visit(const ForStatement * forStatement) {
@@ -390,7 +404,7 @@ llvm::Value *CodeGen::visit(const ForStatement * forStatement) {
         return nullptr;
     }
     // 转化为boolean
-    condValue = llvm::CastToBoolean(llvmContext, condValue);
+    condValue = CastToBoolean(llvmContext, condValue);
     // 创建跳转指令
     irBuilder.CreateCondBr(condValue, block, after);
     //设置插入点，之后的插入就都在这个block块里面
@@ -407,7 +421,7 @@ llvm::Value *CodeGen::visit(const ForStatement * forStatement) {
     }
     // 再次执行for条件语句，如果不满足则跳出循环
     condValue = visit(forStatement->getCondition());
-    condValue = llvm::CastToBoolean(llvmContext, condValue);
+    condValue = CastToBoolean(llvmContext, condValue);
     irBuilder.CreateCondBr(condValue, block, after);
 
     // 插入after block
@@ -426,14 +440,14 @@ llvm::Value *CodeGen::visit(const WhileStatement *whileStatement) {
     if(!condValue) {
         return nullptr;
     }
-    condValue = llvm::CastToBoolean(llvmContext, condValue);
+    condValue = CastToBoolean(llvmContext, condValue);
     irBuilder.CreateCondBr(condValue, block, after);
     irBuilder.SetInsertPoint(block);
     symbolTable.pushAR();
     visit(whileStatement->getWhileBlock());
     symbolTable.popAR();
     condValue = visit(whileStatement->getCondition());
-    condValue = llvm::CastToBoolean(llvmContextm, condValue);
+    condValue = CastToBoolean(llvmContext, condValue);
     irBuilder.CreateCondBr(condValue, block, after);
     theFunction->getBasicBlockList().push_back(after);
     irBuilder.SetInsertPoint(after);

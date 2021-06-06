@@ -728,15 +728,15 @@ class ClassDeclaration : public Declaration {
         return this->type;
     }
 
-    Identifier* getClass() {
+    Identifier* getClass() const {
         return this->_class;
     }
 
-    Identifier* getInterface() {
+    Identifier* getInterface() const {
         return this->_interface;
     }
 
-    Block* getClassBlock() {
+    Block* getClassBlock() const {
         return this->classBlock;
     }
     json genJSON() const override {
@@ -768,11 +768,11 @@ class InterfaceDeclaration : public Declaration {
         return this->type;
     }
 
-    Identifier* getInterface() {
+    Identifier* getInterface() const {
         return this->_interface;
     }
 
-    Block* getInterfaceBlock() {
+    Block* getInterfaceBlock() const {
         return this->interfaceBlock;
     }
     json genJSON() const override {
@@ -926,11 +926,11 @@ class WhileStatement : public LogicStatement {
         return this->type;
     }
 
-    Expression* getCondition() {
+    Expression* getCondition() const {
         return condition;
     }
 
-    Block* getWhileBlock() {
+    Block* getWhileBlock() const {
         return whileBlock;
     }
     json genJSON() const override {
