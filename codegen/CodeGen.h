@@ -23,40 +23,54 @@
 #include <llvm/Support/FormattedStream.h>
 #include <llvm/Support/MathExtras.h>
 #include <string>
+#include <fstream>
 #include "../semantic/symbol.h"
 
 class CodeGen {
     llvm::LLVMContext llvmContext;
     llvm::Module module;
     llvm::IRBuilder<> irBuilder;
+    SymbolTable symbolTable;
+    bool hasVisitedMainFunction = false;
+    std::stack<llvm::BasicBlock *> blockStack;
 
-    void visit(const Statement *);
-    void visit(const Block *);
-//    void visit(const Expression *);
-    void visit(const Identifier *);
-    void visit(const ArithmeticExpression *);
-    void visit(const BinaryOperator *);
-    void visit(const UnaryOperator *);
-    void visit(const TypeConvertOperator *);
-    void visit(const ClassNewExpression *);
-    void visit(const Entity *);
-//    void visit(const AssignExpression *);
-//    void visit(const Declaration *);
-    void visit(const VariableDeclaration *);
-    void visit(const LambdaExpression *);
-    void visit(const FunctionDeclaration *);
-    void visit(const ClassDeclaration *);
-    void visit(const InterfaceDeclaration *);
-//    void visit(const LogicStatement *);
-    void visit(const IfStatement *);
-    void visit(const ForStatement *);
-    void visit(const WhileStatement *);
-    void visit(const ReturnStatement *);
-    void visit(const IOStatement *);
+    llvm::Value *visit(const Statement *);
+    llvm::Value *visit(const Block *);
+    llvm::Value *visit(const Expression *);
+    llvm::Value *visit(const Identifier *);
+    llvm::Value *visit(const ArithmeticExpression *);
+    llvm::Value *visit(const BinaryOperator *);
+    llvm::Value *visit(const UnaryOperator *);
+    llvm::Value *visit(const TypeConvertOperator *);
+    llvm::Value *visit(const ClassNewExpression *);
+    llvm::Value *visit(const Entity *);
+    llvm::Value *visit(const AssignExpression *);
+//    llvm::Value *visit(const Declaration *);
+    llvm::Value *visit(const VariableDeclaration *);
+    llvm::Value *visit(const LambdaExpression *);
+    llvm::Value *visit(const FunctionDeclaration *);
+    llvm::Value *visit(const ClassDeclaration *);
+    llvm::Value *visit(const InterfaceDeclaration *);
+//    llvm::Value *visit(const LogicStatement *);
+    llvm::Value *visit(const IfStatement *);
+    llvm::Value *visit(const ForStatement *);
+    llvm::Value *visit(const WhileStatement *);
+    llvm::Value *visit(const ReturnStatement *);
+    llvm::Value *visit(const IOStatement *);
+
+    void dump(const std::string& outputFileName);
+    void init(const std::string& inputFileName);
+
+    void genMainFunctionContext();
+    llvm::Function *genCFunction(const std::string &name,
+                             llvm::Type *returnType, const std::vector<llvm::Type *> &args, bool varLen);
+    void genFunctionContext(const std::string &name, llvm::Function *function);
+    void endFunctionOrBlock();
+    llvm::Type *getType(Type);
 public:
     CodeGen();
 
-    void genCode(const Block *root, std::string outputFileName);
+    void genCode(const Block *root, const std::string& inputFileName, const std::string& outputFileName);
 };
 
 

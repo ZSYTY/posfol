@@ -210,15 +210,15 @@ class BinaryOperator : public ArithmeticExpression {
         return this->type;
     }
 
-    int getOp() {
+    int getOp() const {
         return op;
     }
 
-    Expression* getLhs() {
+    Expression* getLhs() const {
         return lhs;
     }
 
-    Expression* getRhs() {
+    Expression* getRhs() const {
         return rhs;
     }
 
@@ -254,11 +254,11 @@ class UnaryOperator : public ArithmeticExpression {
         return this->type;
     }
 
-    int getOp() {
+    int getOp() const {
         return op;
     }
 
-    Expression* getHs() {
+    Expression* getHs() const {
         return hs;
     }
     json genJSON() const override {
@@ -292,11 +292,11 @@ class TypeConvertOperator : public ArithmeticExpression {
         return this->type;
     }
 
-    Identifier* getOp() {
+    Identifier* getOp() const {
         return targetType;
     }
 
-    Expression* getExpr() {
+    Expression* getExpr() const {
         return expr;
     }
     json genJSON() const override {
@@ -445,10 +445,10 @@ class AssignExpression : public Expression {
     Type getType() const override {
         return this->type;
     }
-    Entity* getEntity() {
+    Entity* getEntity() const {
         return entity;
     }
-    Expression* getExpr() {
+    Expression* getExpr() const {
         return expr;
     }
 
@@ -650,19 +650,19 @@ class FunctionDeclaration : public Declaration {
         return this->type;
     }
 
-    Identifier* getReturnType() {
+    Identifier* getReturnType() const {
         return this->returnType;
     }
 
-    Identifier* getFunc() {
+    Identifier* getFunc() const {
         return this->func;
     }
 
-    std::vector<VariableDeclaration*>* getParamList() {
+    std::vector<VariableDeclaration*>* getParamList() const {
         return this->paramList;
     }
 
-    Block* getFuncBlock() {
+    Block* getFuncBlock() const {
         return this->funcBlock;
     }
     json genJSON() const override {
@@ -988,14 +988,17 @@ class IOStatement : public LogicStatement {
         return this->type;
     }
 
-    Expression* getExpr() {
+    Expression* getExpr() const {
         return expr;
     }
-    Entity* getEntity() {
+    Entity* getEntity() const {
         return entity;
     }
-    std::string getPrintText() {
+    std::string getPrintText() const {
         return printText;
+    }
+    bool getIsRead() const {
+        return isRead;
     }
 
     json genJSON() const override {
