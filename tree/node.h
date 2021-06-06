@@ -417,6 +417,10 @@ class Entity : public Expression {
         return vectorExpression;
     }
 
+    Type getType() const override {
+        return type;
+    }
+
     json genJSON() const override {
         json root;
         root["name"] = "Entity" + std::string(objectCall ? ": attr_call" : "") + std::string(arrayIndex ? ": array_index" : "") + (functionCall ? ": functionCall" : "");

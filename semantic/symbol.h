@@ -36,7 +36,7 @@ class SymbolTable {
     // 从栈顶pop一个AR，表示跳出该作用域(Block)
     void popAR();
     // 获取栈顶的AR，即当前作用域(Block)
-    std::unordered_map<std::string, const Declaration*> top();
+    std::unordered_map<std::string, const Declaration*>& top();
 
     // push新的Declaration
     void push(std::string name, const Declaration* decl);

@@ -22,3 +22,13 @@ llvm::Type * CodeGen::getType(Type type) {
             return llvm::Type::getVoidTy(llvmContext);
     }
 }
+
+std::string CodeGen::getFmtStr(llvm::Type *type) {
+    if (type->isFloatTy()) {
+        return "%lf";
+    } else if (type->isIntegerTy()) {
+        return "%d";
+    } else if (type->isArrayTy() or type->isPointerTy()) {
+        return "%s";
+    }
+}

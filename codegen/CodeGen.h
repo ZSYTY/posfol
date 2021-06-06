@@ -34,6 +34,7 @@ class CodeGen {
     bool hasVisitedMainFunction = false;
     std::stack<llvm::BasicBlock *> blockStack;
     std::unordered_map<const Declaration*, llvm::Value *> llvmSymbolTable;
+    const Block* rootBlock = nullptr;
 //    std::unordered_map<const Declaration*, llvm::Function *> llvmFunctionTable;
 
     llvm::Value *visit(const Statement *);
@@ -68,7 +69,9 @@ class CodeGen {
                              llvm::Type *returnType, const std::vector<llvm::Type *> &args, bool varLen);
     void genFunctionContext(const std::string &name, llvm::Function *function);
     void endFunctionOrBlock();
+
     llvm::Type *getType(Type);
+    std::string getFmtStr(llvm::Type *);
 public:
     CodeGen();
 
