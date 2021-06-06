@@ -34,6 +34,8 @@ class CodeGen {
     bool hasVisitedMainFunction = false;
     std::stack<llvm::BasicBlock *> blockStack;
     std::unordered_map<const Declaration*, llvm::Value *> llvmSymbolTable;
+    const Block* rootBlock = nullptr;
+    std::unordered_map<const llvm::Function*, std::vector<llvm::Value*>*> lambdaOuterArgsTable;
 //    std::unordered_map<const Declaration*, llvm::Function *> llvmFunctionTable;
 
     llvm::Value *visit(const Statement *);
@@ -49,7 +51,7 @@ class CodeGen {
     llvm::Value *visit(const AssignExpression *);
 //    llvm::Value *visit(const Declaration *);
     llvm::Value *visit(const VariableDeclaration *);
-    llvm::Value *visit(const LambdaExpression *);
+    llvm::Value *visit(LambdaExpression *);
     llvm::Value *visit(const FunctionDeclaration *);
     llvm::Value *visit(const ClassDeclaration *);
     llvm::Value *visit(const InterfaceDeclaration *);
@@ -66,13 +68,19 @@ class CodeGen {
     void genMainFunctionContext();
     llvm::Function *genCFunction(const std::string &name,
                              llvm::Type *returnType, const std::vector<llvm::Type *> &args, bool varLen);
+    LambdaFunction *genCFunction(const std::string &name,
+                                 llvm::Type *returnType, const std::vector<llvm::Type *> &args, const std::vector<llvm::Value*> &outArgs, bool varLen);
     void genFunctionContext(const std::string &name, llvm::Function *function);
     void endFunctionOrBlock();
+
     llvm::Type *getType(Type);
+    std::string getFmtStr(llvm::Type *);
 public:
     CodeGen();
 
     void genCode(const Block *root, const std::string& inputFileName, const std::string& outputFileName);
+
+    llvm::Value *visit(const LambdaExpression *lambdaExpression);
 };
 
 

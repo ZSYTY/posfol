@@ -44,7 +44,7 @@ void SymbolTable::popAR() {
     symbolTable.pop_back();
 }
 
-std::unordered_map<std::string, const Declaration*> SymbolTable::top() {
+std::unordered_map<std::string, const Declaration*>& SymbolTable::top() {
     return symbolTable.back();
 }
 

@@ -21,6 +21,7 @@ void CodeGen::dump(const std::string& outputFileName) {
 
 void CodeGen::genCode(const Block *root, const std::string& inputFileName, const std::string& outputFileName) {
 //    init(inputFileName);
+    rootBlock = root;
     visit(root);
     if (! hasVisitedMainFunction) {
         genMainFunctionContext();
@@ -141,6 +142,9 @@ llvm::Value *CodeGen::visit(const Statement *stmt) {
 
 llvm::BasicBlock *CodeGen::visit(const Block *block) {
     llvm::BasicBlock *BB = nullptr;
+    if (block != rootBlock) {
+        symbolTable.pushAR();
+    }
     if (! symbolTable.isGlobal()) {
         llvm::Function *function = irBuilder.GetInsertBlock()->getParent();
         BB = llvm::BasicBlock::Create(llvmContext, "", function);
@@ -150,15 +154,20 @@ llvm::BasicBlock *CodeGen::visit(const Block *block) {
         visit(stmt);
     }
     if (BB) {
-//        llvm::Function *function = irBuilder.GetInsertBlock()->getParent();
-//        irBuilder.SetInsertPoint(llvm::BasicBlock::Create(llvmContext, "", function));
+        llvm::Function *function = irBuilder.GetInsertBlock()->getParent();
+        irBuilder.SetInsertPoint(llvm::BasicBlock::Create(llvmContext, "", function));
+    }
+    if (block != rootBlock) {
+        symbolTable.popAR();
     }
     return BB;
 }
 
 llvm::Value *CodeGen::visit(const Identifier *identifier) {
     assert(! identifier->getIsType());
-    return llvmSymbolTable[symbolTable.top()[identifier->getValue()]];
+    auto tmp = symbolTable.top();
+    auto tmp2 = tmp[identifier->getValue()];
+    return llvmSymbolTable[symbolTable.findSymbol(identifier->getValue())];
 }
 
 llvm::Value *CodeGen::visit(const ArithmeticExpression *arithmeticExpression) {
@@ -238,7 +247,19 @@ llvm::Value *CodeGen::visit(const Entity *entity) {
     } else if (entity->getIsArrayIndex()) {
         // TODO:
     } else if (entity->getIsFunctionCall()) {
-        // TODO:
+        auto fn = visit(entity->getEntity());
+        auto deRef = [this](llvm::Value *ptr) {
+            return this->irBuilder.CreateLoad(ptr, "deref");
+        };
+        std::vector<llvm::Value *> paramsVal;
+        auto pregs = lambdaOuterArgsTable[reinterpret_cast<llvm::Function*>(fn)];
+        for (const auto &preg : *pregs) {
+            paramsVal.emplace_back(preg);
+        }
+        for (const auto &arg : *entity->getVectorExpression()) {
+            paramsVal.emplace_back(deRef(visit(arg)));
+        }
+        return irBuilder.CreateCall(reinterpret_cast<llvm::Function *>(fn), paramsVal, "call_fn");
     } else if (entity->getIsObjectCall()) {
         // TODO:
     }
@@ -277,6 +298,8 @@ llvm::Value *CodeGen::visit(const VariableDeclaration * variableDeclaration) {
             case CHAR_DEFINE_TYPE:
                 constant = llvm::ConstantInt::get(type, expression ? expressionResult : 0);
                 break;
+            case FUNC_DEFINE_TYPE:
+                break;
             default:
                 break;
         }
@@ -297,8 +320,25 @@ llvm::Value *CodeGen::visit(const VariableDeclaration * variableDeclaration) {
     return value;
 }
 
-llvm::Value *CodeGen::visit(const LambdaExpression *) {
+llvm::Value *CodeGen::visit(const LambdaExpression *lambdaExpression) {
+    std::vector<llvm::Type *> args;
+    auto* outerArgs = new std::vector<llvm::Value *>();
+    for (auto item : *lambdaExpression->getOuterVars()) {
+        outerArgs->push_back(visit(item));
+        args.push_back(getType(symbolTable.findSymbol(item->getValue())->getType()));
+    }
+    for (auto item : *lambdaExpression->getParamList()) {
+        args.push_back(getType(item->getType()));
+    }
 
+    llvm::Function *function = genCFunction("lambda", getType(lambdaExpression->getReturnType()->getType()), args, false);
+    genFunctionContext("lambda", function);
+
+    lambdaOuterArgsTable[function] = outerArgs;
+
+    visit(lambdaExpression->getFuncBlock());
+    endFunctionOrBlock();
+    return function;
 }
 
 llvm::Value *CodeGen::visit(const FunctionDeclaration *functionDeclaration) {
@@ -318,6 +358,7 @@ llvm::Value *CodeGen::visit(const FunctionDeclaration *functionDeclaration) {
     }
     visit(functionDeclaration->getFuncBlock());
     endFunctionOrBlock();
+    symbolTable.push(name, functionDeclaration);
     return function;
 }
 
@@ -330,7 +371,7 @@ llvm::Value *CodeGen::visit(const InterfaceDeclaration *) {
 }
 
 llvm::Value *CodeGen::visit(const IfStatement *ifStatement) {
-    irBuilder.CreateCondBr(visit(ifStatement->getCondition()), visit(ifStatement->getTrueBlock()), visit(ifStatement->getFalseBlock()));
+    return irBuilder.CreateCondBr(visit(ifStatement->getCondition()), visit(ifStatement->getTrueBlock()), visit(ifStatement->getFalseBlock()));
 }
 
 llvm::Value *CodeGen::visit(const ForStatement * forStatement) {
@@ -402,7 +443,7 @@ llvm::Value *CodeGen::visit(const WhileStatement *whileStatement) {
 
 llvm::Value *CodeGen::visit(const ReturnStatement *returnStatement) {
     llvm::Value *returnValue = visit(returnStatement->getReturnExpr());
-    irBuilder.CreateRet(returnValue);
+    return irBuilder.CreateRet(returnValue);
 }
 
 llvm::Value *CodeGen::visit(const IOStatement *ioStatement) {
@@ -410,15 +451,30 @@ llvm::Value *CodeGen::visit(const IOStatement *ioStatement) {
                                                       llvm::Type::getInt32Ty(llvmContext), { llvm::Type::getInt8PtrTy(llvmContext) }, true);
     static llvm::Function *scanfFunc = genCFunction("scanf",
                                                     llvm::Type::getInt32Ty(llvmContext), { llvm::Type::getInt8PtrTy(llvmContext) }, true);
-    // TODO:
-    if (ioStatement->getIsRead()) {
+    std::vector<llvm::Value *> args;
+    std::string fmtStr = "";
+    llvm::Value *value = nullptr;
 
+    if (ioStatement->getExpr()) {
+        value = visit(ioStatement->getExpr());
+        fmtStr = getFmtStr(value->getType());
+    } else if (ioStatement->getEntity()) {
+        value = visit(ioStatement->getEntity());
+        fmtStr = getFmtStr(value->getType());
+    }
+
+    if (ioStatement->getIsRead()) {
+        args.push_back(irBuilder.CreateGlobalStringPtr(fmtStr, "fmtStr"));
+        args.push_back(value);
+        irBuilder.CreateCall(scanfFunc, args, "readSysFunc");
     } else {
         if (ioStatement->getExpr()) {
-
+            args.push_back(irBuilder.CreateGlobalStringPtr(fmtStr, "fmtStr"));
+            args.push_back(value);
         } else {
-
+            args.push_back(irBuilder.CreateGlobalStringPtr(ioStatement->getPrintText(), "printStr"));
         }
+        irBuilder.CreateCall(printfFunc, args, "printSysFunc");
     }
 }
 

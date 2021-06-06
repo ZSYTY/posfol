@@ -417,6 +417,10 @@ class Entity : public Expression {
         return vectorExpression;
     }
 
+    Type getType() const override {
+        return type;
+    }
+
     json genJSON() const override {
         json root;
         root["name"] = "Entity" + std::string(objectCall ? ": attr_call" : "") + std::string(arrayIndex ? ": array_index" : "") + (functionCall ? ": functionCall" : "");
@@ -600,19 +604,19 @@ class LambdaExpression : public Expression {
         return this->type;
     }
 
-    std::vector<Identifier*>* getOuterVars() {
+    std::vector<Identifier*>* getOuterVars() const {
         return this->outerVars;
     }
 
-    std::vector<VariableDeclaration*>* getParamList() {
+    std::vector<VariableDeclaration*>* getParamList() const {
         return this->paramList;
     }
 
-    Identifier* getReturnType() {
+    Identifier* getReturnType() const {
         return this->returnType;
     }
 
-    Block* getFuncBlock() {
+    Block* getFuncBlock() const {
         return this->funcBlock;
     }
 

@@ -23,9 +23,6 @@ CodeGen::genCFunction(const std::string &name, llvm::Type *returnType, const std
     return func;
 }
 
-
-
-
 void CodeGen::genFunctionContext(const std::string &name, llvm::Function *function) {
     llvm::BasicBlock *BB = llvm::BasicBlock::Create(llvmContext, name, function);
     irBuilder.SetInsertPoint(BB);
