@@ -333,12 +333,71 @@ llvm::Value *CodeGen::visit(const IfStatement *ifStatement) {
     irBuilder.CreateCondBr(visit(ifStatement->getCondition()), visit(ifStatement->getTrueBlock()), visit(ifStatement->getFalseBlock()));
 }
 
-llvm::Value *CodeGen::visit(const ForStatement *) {
+llvm::Value *CodeGen::visit(const ForStatement * forStatement) {
+    llvm::Function* theFunction = irBuilder.GetInsertBlock()->getParent();
+    llvm::BasicBlock* block = llvm::BasicBlock::Create(llvmContext, "forloop", theFunction);
+    llvm::BasicBlock* after = llvm::BasicBlock::Create(llvmContext, "forcont");
 
+    // 执行初始化语句
+    if(forStatement->getInitial()) {
+        visit(forStatement->getInitial());
+    }
+
+    // 获取条件语句
+    llvm::Value* condValue = visit(forStatement->getCondition());
+    if(!condValue) {
+        return nullptr;
+    }
+    // 转化为boolean
+    condValue = llvm::CastToBoolean(llvmContext, condValue);
+    // 创建跳转指令
+    irBuilder.CreateCondBr(condValue, block, after);
+    //设置插入点，之后的插入就都在这个block块里面
+    irBuilder.SetInsertPoint(block);
+    // 进入新的block作用域，栈pushAR
+    symbolTable.pushAR();
+    // 执行block里的函数体
+    visit(forStatement->getForBlock());
+    // 函数体执行完毕，栈popAR
+    symbolTable.popAR();
+    // 做change语句
+    if(forStatement->getChange()) {
+        visit(forStatement->getChange());
+    }
+    // 再次执行for条件语句，如果不满足则跳出循环
+    condValue = visit(forStatement->getCondition());
+    condValue = llvm::CastToBoolean(llvmContext, condValue);
+    irBuilder.CreateCondBr(condValue, block, after);
+
+    // 插入after block
+    theFunction->getBasicBlockList().push_back(after);
+    irBuilder.SetInsertPoint(after);
+
+    return nullptr;
 }
 
-llvm::Value *CodeGen::visit(const WhileStatement *) {
+llvm::Value *CodeGen::visit(const WhileStatement *whileStatement) {
+    llvm::Function* theFunction = irBuilder.GetInsertBlock()->getParent();
+    llvm::BasicBlock* block = llvm::BasicBlock::Create(llvmContext, "whileloop", theFunction);
+    llvm::BasicBlock* after = llvm::BasicBlock::Create(llvmContext, "whilecont");
 
+    llvm::Value* condValue = visit(whileStatement->getCondition());
+    if(!condValue) {
+        return nullptr;
+    }
+    condValue = llvm::CastToBoolean(llvmContext, condValue);
+    irBuilder.CreateCondBr(condValue, block, after);
+    irBuilder.SetInsertPoint(block);
+    symbolTable.pushAR();
+    visit(whileStatement->getWhileBlock());
+    symbolTable.popAR();
+    condValue = visit(whileStatement->getCondition());
+    condValue = llvm::CastToBoolean(llvmContextm, condValue);
+    irBuilder.CreateCondBr(condValue, block, after);
+    theFunction->getBasicBlockList().push_back(after);
+    irBuilder.SetInsertPoint(after);
+
+    return nullptr;
 }
 
 llvm::Value *CodeGen::visit(const ReturnStatement *returnStatement) {

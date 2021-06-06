@@ -874,19 +874,19 @@ class ForStatement : public LogicStatement {
         return this->type;
     }
 
-    Expression* getInitial() {
+    Expression* getInitial() const {
         return initial;
     }
 
-    Expression* getCondition() {
+    Expression* getCondition() const {
         return condition;
     }
 
-    Expression* getChange() {
+    Expression* getChange() const {
         return change;
     }
 
-    Block* getForBlock() {
+    Block* getForBlock() const {
         return forBlock;
     }
     json genJSON() const override {
