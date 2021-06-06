@@ -155,6 +155,9 @@ llvm::Value *CodeGen::visit(const Statement *stmt) {
 }
 
 llvm::BasicBlock *CodeGen::visit(const Block *block) {
+    if (block == nullptr) {
+        return nullptr;
+    }
     llvm::BasicBlock *BB = nullptr;
     if (block != rootBlock) {
         symbolTable.pushAR();
@@ -167,10 +170,10 @@ llvm::BasicBlock *CodeGen::visit(const Block *block) {
     for (auto stmt : *block->getStatementList()) {
         visit(stmt);
     }
-    if (BB) {
-        llvm::Function *function = irBuilder.GetInsertBlock()->getParent();
-        irBuilder.SetInsertPoint(llvm::BasicBlock::Create(llvmContext, "", function));
-    }
+//    if (BB) {
+//        llvm::Function *function = irBuilder.GetInsertBlock()->getParent();
+//        irBuilder.SetInsertPoint(llvm::BasicBlock::Create(llvmContext, "", function));
+//    }
     if (block != rootBlock) {
         symbolTable.popAR();
     }
@@ -274,10 +277,10 @@ llvm::Value *CodeGen::visit(const Entity *entity, bool deref) {
             return this->irBuilder.CreateLoad(ptr, "deref");
         };
         std::vector<llvm::Value *> paramsVal;
-        auto pregs = lambdaOuterArgsTable[reinterpret_cast<llvm::Function*>(fn)];
-        for (const auto &preg : *pregs) {
-            paramsVal.emplace_back(preg);
-        }
+//        auto pregs = lambdaOuterArgsTable[reinterpret_cast<llvm::Function*>(fn)];
+//        for (const auto &preg : *pregs) {
+//            paramsVal.emplace_back(preg);
+//        }
         for (const auto &arg : *entity->getVectorExpression()) {
             paramsVal.emplace_back(deRef(visit(arg)));
         }
@@ -376,6 +379,7 @@ llvm::Value *CodeGen::visit(const FunctionDeclaration *functionDeclaration) {
         std::vector<llvm::Type *> args;
         for (auto item : *functionDeclaration->getParamList()) {
             args.push_back(getType(item->getType()));
+            visit(item);
         }
         function = genCFunction(name, getType(functionDeclaration->getReturnType()->getType()), args, false);
         genFunctionContext(name, function);
@@ -396,19 +400,25 @@ llvm::Value *CodeGen::visit(const InterfaceDeclaration *) {
 }
 
 llvm::Value *CodeGen::visit(const IfStatement *ifStatement) {
+    llvm::Function* theFunction = irBuilder.GetInsertBlock()->getParent();
     llvm::Value* condValue = visit(ifStatement->getCondition());
+    llvm::BasicBlock* beforeBlock = irBuilder.GetInsertBlock();
     llvm::BasicBlock* trueBlock = visit(ifStatement->getTrueBlock());
     llvm::BasicBlock* falseBlock = visit(ifStatement->getFalseBlock());
+    llvm::BasicBlock* afterBlock = llvm::BasicBlock::Create(llvmContext, "after", theFunction);
     if(falseBlock) {
-        return irBuilder.CreateCondBr(CastToBoolean(llvmContext, condValue), trueBlock, falseBlock);
+        irBuilder.SetInsertPoint(beforeBlock);
+        irBuilder.CreateCondBr(CastToBoolean(llvmContext, condValue), trueBlock, falseBlock);
+        irBuilder.SetInsertPoint(trueBlock);
+        irBuilder.CreateBr(afterBlock);
+        irBuilder.SetInsertPoint(falseBlock);
+        irBuilder.CreateBr(afterBlock);
+        irBuilder.SetInsertPoint(afterBlock);
+//        irBuilder.SetInsertPoint();
     } else {
-        llvm::Function* theFunction = irBuilder.GetInsertBlock()->getParent();
-        llvm::BasicBlock* after = llvm::BasicBlock::Create(llvmContext, "false");
-        irBuilder.CreateCondBr(CastToBoolean(llvmContext, condValue), trueBlock, after);
-        // 插入after block
-        theFunction->getBasicBlockList().push_back(after);
-        irBuilder.SetInsertPoint(after);
-        return after;
+        irBuilder.SetInsertPoint(beforeBlock);
+        irBuilder.CreateCondBr(CastToBoolean(llvmContext, condValue), trueBlock, afterBlock);
+        irBuilder.SetInsertPoint(afterBlock);
     }
 }
 
