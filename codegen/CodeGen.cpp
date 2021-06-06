@@ -163,11 +163,19 @@ llvm::BasicBlock *CodeGen::visit(const Block *block) {
     return BB;
 }
 
-llvm::Value *CodeGen::visit(const Identifier *identifier) {
+llvm::Value *CodeGen::visit(const Identifier *identifier, bool deref) {
     assert(! identifier->getIsType());
-    auto tmp = symbolTable.top();
-    auto tmp2 = tmp[identifier->getValue()];
-    return llvmSymbolTable[symbolTable.findSymbol(identifier->getValue())];
+    if (identifier->getType() == NAME) {
+        auto value = llvmSymbolTable[symbolTable.findSymbol(identifier->getValue())];
+        if (deref) {
+            return irBuilder.CreateLoad(value, "deref");
+        } else {
+            return value;
+        }
+    } else {
+        std::cout << "constant" << std::endl;
+        return genConstant(identifier);
+    }
 }
 
 llvm::Value *CodeGen::visit(const ArithmeticExpression *arithmeticExpression) {
@@ -182,8 +190,8 @@ llvm::Value *CodeGen::visit(const ArithmeticExpression *arithmeticExpression) {
 }
 
 llvm::Value *CodeGen::visit(const BinaryOperator *binaryOperator) {
-    llvm::Value *lhs = visit(binaryOperator->getLhs());
-    llvm::Value *rhs = visit(binaryOperator->getRhs());
+    llvm::Value *lhs = visit(binaryOperator->getLhs(), true);
+    llvm::Value *rhs = visit(binaryOperator->getRhs(), true);
     // std::string op_name[] = {"||", "&&", ">=", ">", "<=", "<", "==", "!=", "+", "-", "*", "/", "%"};
     bool isFP = lhs->getType()->isFloatTy() || rhs->getType()->isFloatTy();
     switch (binaryOperator->getOp()) {
@@ -241,9 +249,9 @@ llvm::Value *CodeGen::visit(const ClassNewExpression *) {
 
 }
 
-llvm::Value *CodeGen::visit(const Entity *entity) {
+llvm::Value *CodeGen::visit(const Entity *entity, bool deref) {
     if (entity->getIsTerminal()) {
-        return visit(entity->getIdentifier());
+        return visit(entity->getIdentifier(), deref);
     } else if (entity->getIsArrayIndex()) {
         // TODO:
     } else if (entity->getIsFunctionCall()) {
@@ -269,8 +277,8 @@ llvm::Value *CodeGen::visit(const VariableDeclaration * variableDeclaration) {
     auto varType = variableDeclaration->getVarType()->getType();
     auto expression = variableDeclaration->getExpr();
     // TODO: calculate the expression
-    auto expressionResult = 0;
-    llvm::Constant *constant = nullptr;
+    auto expressionResult = expression ? visit(expression) : nullptr;
+//    llvm::Constant *constant = nullptr;
     llvm::Value *value = nullptr;
     auto arraySizes = variableDeclaration->getArraySizes();
     llvm::Value *arraySize = nullptr;
@@ -279,40 +287,43 @@ llvm::Value *CodeGen::visit(const VariableDeclaration * variableDeclaration) {
         // TODO:
         /* Define an array */
     } else {
-        switch (varType) {
-            case INT_DEFINE_TYPE:
-                constant = llvm::ConstantInt::get(type,expression ? expressionResult : 0);
-                break;
-            case LONG_DEFINE_TYPE:
-                constant = llvm::ConstantInt::get(type,expression ? expressionResult : 0);
-                break;
-            case FLOAT_DEFINE_TYPE:
-                constant = llvm::ConstantFP::get(type, expression ? expressionResult : 0);
-                break;
-            case DOUBLE_DEFINE_TYPE:
-                constant = llvm::ConstantFP::get(type, expression ? expressionResult : 0);
-                break;
-            case BOOLEAN_DEFINE_TYPE:
-                constant = llvm::ConstantInt::get(type,expression ? expressionResult : 0);
-                break;
-            case CHAR_DEFINE_TYPE:
-                constant = llvm::ConstantInt::get(type, expression ? expressionResult : 0);
-                break;
-            case FUNC_DEFINE_TYPE:
-                break;
-            default:
-                break;
-        }
+//        switch (varType) {
+//            case INT_DEFINE_TYPE:
+//                constant = llvm::ConstantInt::get(type,expression ? expressionResult : 0);
+//                break;
+//            case LONG_DEFINE_TYPE:
+//                constant = llvm::ConstantInt::get(type,expression ? expressionResult : 0);
+//                break;
+//            case FLOAT_DEFINE_TYPE:
+//                constant = llvm::ConstantFP::get(type, expression ? expressionResult : 0);
+//                break;
+//            case DOUBLE_DEFINE_TYPE:
+//                constant = llvm::ConstantFP::get(type, expression ? expressionResult : 0);
+//                break;
+//            case BOOLEAN_DEFINE_TYPE:
+//                constant = llvm::ConstantInt::get(type,expression ? expressionResult : 0);
+//                break;
+//            case CHAR_DEFINE_TYPE:
+//                constant = llvm::ConstantInt::get(type, expression ? expressionResult : 0);
+//                break;
+//            case FUNC_DEFINE_TYPE:
+//                break;
+//            default:
+//                break;
+//        }
     }
     if (! type->isVoidTy()) {
         auto name = variableDeclaration->getVar()->getValue();
         if (symbolTable.isGlobal()) {
             // TODO: support global array variables
             value = new llvm::GlobalVariable(module, type, false,
-                                     llvm::GlobalValue::CommonLinkage, constant, name);
+                                     llvm::GlobalValue::CommonLinkage, nullptr, name);
+//            irBuilder.CreateStore(expressionResult, value);
         } else {
             value = irBuilder.CreateAlloca(type, arraySize, name);
-            irBuilder.CreateStore(constant, value);
+            if (expressionResult) {
+                irBuilder.CreateStore(expressionResult, value);
+            }
         }
         symbolTable.push(name, variableDeclaration);
         llvmSymbolTable[variableDeclaration] = value;
@@ -419,9 +430,9 @@ llvm::Value *CodeGen::visit(const IOStatement *ioStatement) {
     }
 }
 
-llvm::Value *CodeGen::visit(const Expression * expression) {
+llvm::Value *CodeGen::visit(const Expression * expression, bool deref) {
     switch (expression->getType()) {
-        case ARITHMETICEXPRESSION:
+        case ARITHMETICEXPRESSION: case BINARYOPERATOR: case UNARYOPERATOR: case TYPECONVERTOPERATOR:
             return visit(dynamic_cast<const ArithmeticExpression *>(expression));
         case ASSIGNEXPRESSION:
             return visit(dynamic_cast<const AssignExpression *>(expression));
@@ -434,7 +445,9 @@ llvm::Value *CodeGen::visit(const Expression * expression) {
         case CLASSFUNCEXPRESSION:
             break;
         case ENTITYEXPRESSION:
-            return visit(dynamic_cast<const Entity *>(expression));
+            return visit(dynamic_cast<const Entity *>(expression), deref);
+        case INT_VALUE: case LONG_VALUE: case FLOAT_VALUE: case DOUBLE_VALUE: case CHAR_VALUE: case BOOLEAN_VALUE:
+            return visit(dynamic_cast<const Identifier *>(expression), true);
         default:
             return nullptr;
     }
