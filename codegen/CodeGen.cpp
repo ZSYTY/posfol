@@ -397,8 +397,8 @@ llvm::Value *CodeGen::visit(const InterfaceDeclaration *) {
 
 llvm::Value *CodeGen::visit(const IfStatement *ifStatement) {
     llvm::Value* condValue = visit(ifStatement->getCondition());
-    llvm::Value* trueBlock = visit(ifStatement->getTrueBlock());
-    llvm::Value* falseBlock = visit(ifStatement->getFalseBlock());
+    llvm::BasicBlock* trueBlock = visit(ifStatement->getTrueBlock());
+    llvm::BasicBlock* falseBlock = visit(ifStatement->getFalseBlock());
     if(falseBlock) {
         return irBuilder.CreateCondBr(CastToBoolean(llvmContext, condValue), trueBlock, falseBlock);
     } else {
