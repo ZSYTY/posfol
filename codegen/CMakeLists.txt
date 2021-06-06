@@ -1,6 +1,6 @@
 add_library(codegen
         CodeGen.cpp
-        )
+        FunctionContext.cpp TypeUtil.cpp)
 
 find_package(
         LLVM REQUIRED CONFIG,

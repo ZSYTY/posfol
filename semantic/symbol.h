@@ -20,13 +20,13 @@
  */
 class SymbolTable {
    private:
-    std::vector<std::unordered_map<std::string, Declaration*> > symbolTable;
+    std::vector<std::unordered_map<std::string, const Declaration*> > symbolTable;
 
    public:
-    SymbolTable() {}
+    SymbolTable();
     ~SymbolTable() {}
     // 寻找该符号是否存在
-    Declaration* findSymbol(std::string name);
+    const Declaration* findSymbol(std::string name);
     // 如果是变量则返回具体类型，如果是函数、类、接口，则返回对应抽象类型
     Type getSymbolType(std::string name);
     // 判断在当前作用域内是否已经声明，注：在外层作用域声明的话，本层作用域会用新的symbol引用覆盖
@@ -36,12 +36,14 @@ class SymbolTable {
     // 从栈顶pop一个AR，表示跳出该作用域(Block)
     void popAR();
     // 获取栈顶的AR，即当前作用域(Block)
-    std::unordered_map<std::string, Declaration*> top();
+    std::unordered_map<std::string, const Declaration*> top();
 
     // push新的Declaration
-    void push(std::string name, Declaration* decl);
+    void push(std::string name, const Declaration* decl);
     // pop旧的Declaration
     void pop(std::string name);
+    // 判断当前是否处于全局作用域
+    bool isGlobal();
 };
 
 #endif
