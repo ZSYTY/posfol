@@ -247,7 +247,19 @@ llvm::Value *CodeGen::visit(const Entity *entity) {
     } else if (entity->getIsArrayIndex()) {
         // TODO:
     } else if (entity->getIsFunctionCall()) {
-        // TODO:
+        auto fn = visit(entity->getEntity());
+        auto deRef = [this](llvm::Value *ptr) {
+            return this->irBuilder.CreateLoad(ptr, "deref");
+        };
+        std::vector<llvm::Value *> paramsVal;
+        auto pregs = lambdaOuterArgsTable[reinterpret_cast<llvm::Function*>(fn)];
+        for (const auto &preg : *pregs) {
+            paramsVal.emplace_back(preg);
+        }
+        for (const auto &arg : *entity->getVectorExpression()) {
+            paramsVal.emplace_back(deRef(visit(arg)));
+        }
+        return irBuilder.CreateCall(reinterpret_cast<llvm::Function *>(fn), paramsVal, "call_fn");
     } else if (entity->getIsObjectCall()) {
         // TODO:
     }
@@ -308,8 +320,25 @@ llvm::Value *CodeGen::visit(const VariableDeclaration * variableDeclaration) {
     return value;
 }
 
-llvm::Value *CodeGen::visit(const LambdaExpression *) {
+llvm::Value *CodeGen::visit(const LambdaExpression *lambdaExpression) {
+    std::vector<llvm::Type *> args;
+    auto* outerArgs = new std::vector<llvm::Value *>();
+    for (auto item : *lambdaExpression->getOuterVars()) {
+        outerArgs->push_back(visit(item));
+        args.push_back(getType(symbolTable.findSymbol(item->getValue())->getType()));
+    }
+    for (auto item : *lambdaExpression->getParamList()) {
+        args.push_back(getType(item->getType()));
+    }
 
+    llvm::Function *function = genCFunction("lambda", getType(lambdaExpression->getReturnType()->getType()), args, false);
+    genFunctionContext("lambda", function);
+
+    lambdaOuterArgsTable[function] = outerArgs;
+
+    visit(lambdaExpression->getFuncBlock());
+    endFunctionOrBlock();
+    return function;
 }
 
 llvm::Value *CodeGen::visit(const FunctionDeclaration *functionDeclaration) {

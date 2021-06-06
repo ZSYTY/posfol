@@ -44,6 +44,16 @@ enum Type {
     VOID_DEFINE_TYPE,
     CLASS_DEFINE_TYPE,
 
+    INT_VALUE,
+    LONG_VALUE,
+    FLOAT_VALUE,
+    DOUBLE_VALUE,
+    BOOLEAN_VALUE,
+    CHAR_VALUE,
+    FUNC_VALUE,
+    VOID_VALUE,
+    CLASS_VALUE,
+
     ARRAY,
     TYPE,
     NAME,
