@@ -37,7 +37,7 @@ class CodeGen {
 //    std::unordered_map<const Declaration*, llvm::Function *> llvmFunctionTable;
 
     llvm::Value *visit(const Statement *);
-    llvm::Value *visit(const Block *);
+    llvm::BasicBlock *visit(const Block *);
     llvm::Value *visit(const Expression *);
     llvm::Value *visit(const Identifier *);
     llvm::Value *visit(const ArithmeticExpression *);

@@ -139,10 +139,21 @@ llvm::Value *CodeGen::visit(const Statement *stmt) {
     }
 }
 
-llvm::Value *CodeGen::visit(const Block *block) {
+llvm::BasicBlock *CodeGen::visit(const Block *block) {
+    llvm::BasicBlock *BB = nullptr;
+    if (! symbolTable.isGlobal()) {
+        llvm::Function *function = irBuilder.GetInsertBlock()->getParent();
+        BB = llvm::BasicBlock::Create(llvmContext, "", function);
+        irBuilder.SetInsertPoint(BB);
+    }
     for (auto stmt : *block->getStatementList()) {
         visit(stmt);
     }
+    if (BB) {
+//        llvm::Function *function = irBuilder.GetInsertBlock()->getParent();
+//        irBuilder.SetInsertPoint(llvm::BasicBlock::Create(llvmContext, "", function));
+    }
+    return BB;
 }
 
 llvm::Value *CodeGen::visit(const Identifier *identifier) {
@@ -318,8 +329,8 @@ llvm::Value *CodeGen::visit(const InterfaceDeclaration *) {
 
 }
 
-llvm::Value *CodeGen::visit(const IfStatement *) {
-
+llvm::Value *CodeGen::visit(const IfStatement *ifStatement) {
+    irBuilder.CreateCondBr(visit(ifStatement->getCondition()), visit(ifStatement->getTrueBlock()), visit(ifStatement->getFalseBlock()));
 }
 
 llvm::Value *CodeGen::visit(const ForStatement *) {
@@ -330,8 +341,9 @@ llvm::Value *CodeGen::visit(const WhileStatement *) {
 
 }
 
-llvm::Value *CodeGen::visit(const ReturnStatement *) {
-
+llvm::Value *CodeGen::visit(const ReturnStatement *returnStatement) {
+    llvm::Value *returnValue = visit(returnStatement->getReturnExpr());
+    irBuilder.CreateRet(returnValue);
 }
 
 llvm::Value *CodeGen::visit(const IOStatement *ioStatement) {

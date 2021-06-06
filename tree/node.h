@@ -827,15 +827,15 @@ class IfStatement : public LogicStatement {
         return this->type;
     }
 
-    Expression* getCondition() {
+    Expression* getCondition() const {
         return this->condition;
     }
 
-    Block* getTrueBlock() {
+    Block* getTrueBlock() const {
         return this->trueBlock;
     }
 
-    Block* getFalseBlock() {
+    Block* getFalseBlock() const {
         return this->falseBlock;
     }
     json genJSON() const override {
@@ -959,7 +959,7 @@ class ReturnStatement : public LogicStatement {
         return this->type;
     }
 
-    Expression* getReturnExpr() {
+    Expression* getReturnExpr() const {
         return expr;
     }
 
