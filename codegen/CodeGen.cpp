@@ -267,15 +267,22 @@ llvm::Value *CodeGen::visit(const ClassNewExpression *) {
 }
 
 llvm::Value *CodeGen::visit(const Entity *entity, bool deref) {
+
+    auto deRef = [this](llvm::Value *ptr) {
+        return this->irBuilder.CreateLoad(ptr, "deref");
+    };
     if (entity->getIsTerminal()) {
         return visit(entity->getIdentifier(), deref);
     } else if (entity->getIsArrayIndex()) {
         // TODO:
+        llvm::Value* array = visit(entity->getEntity());
+        llvm::Value* indexExpr = visit(entity->getExpression());
+        return irBuilder.CreateGEP(array, {llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext), 0, true), indexExpr});
     } else if (entity->getIsFunctionCall()) {
         auto fn = visit(entity->getEntity());
-        auto deRef = [this](llvm::Value *ptr) {
-            return this->irBuilder.CreateLoad(ptr, "deref");
-        };
+//        auto deRef = [this](llvm::Value *ptr) {
+//            return this->irBuilder.CreateLoad(ptr, "deref");
+//        };
         std::vector<llvm::Value *> paramsVal;
 //        auto pregs = lambdaOuterArgsTable[reinterpret_cast<llvm::Function*>(fn)];
 //        for (const auto &preg : *pregs) {
@@ -293,49 +300,31 @@ llvm::Value *CodeGen::visit(const Entity *entity, bool deref) {
 llvm::Value *CodeGen::visit(const VariableDeclaration * variableDeclaration) {
     auto varType = variableDeclaration->getVarType()->getType();
     auto expression = variableDeclaration->getExpr();
-    // TODO: calculate the expression
     auto expressionResult = expression ? visit(expression) : nullptr;
-//    llvm::Constant *constant = nullptr;
     llvm::Value *value = nullptr;
     auto arraySizes = variableDeclaration->getArraySizes();
     llvm::Value *arraySize = nullptr;
-    auto type = getType(varType);
     if (arraySizes) {
         // TODO:
         /* Define an array */
-    } else {
-//        switch (varType) {
-//            case INT_DEFINE_TYPE:
-//                constant = llvm::ConstantInt::get(type,expression ? expressionResult : 0);
-//                break;
-//            case LONG_DEFINE_TYPE:
-//                constant = llvm::ConstantInt::get(type,expression ? expressionResult : 0);
-//                break;
-//            case FLOAT_DEFINE_TYPE:
-//                constant = llvm::ConstantFP::get(type, expression ? expressionResult : 0);
-//                break;
-//            case DOUBLE_DEFINE_TYPE:
-//                constant = llvm::ConstantFP::get(type, expression ? expressionResult : 0);
-//                break;
-//            case BOOLEAN_DEFINE_TYPE:
-//                constant = llvm::ConstantInt::get(type,expression ? expressionResult : 0);
-//                break;
-//            case CHAR_DEFINE_TYPE:
-//                constant = llvm::ConstantInt::get(type, expression ? expressionResult : 0);
-//                break;
-//            case FUNC_DEFINE_TYPE:
-//                break;
-//            default:
-//                break;
-//        }
+        std::vector<llvm::Value *> sizeList;
+        for (auto &item : *arraySizes) {
+            sizeList.push_back(visit(item));
+        }
+
+        arraySize = sizeList.front();
+        for (int i = 1; i < sizeList.size(); i++) {
+            arraySize = irBuilder.CreateMul(arraySize, sizeList[i]);
+        }
     }
+
+    auto type = getType(varType, arraySizes ? *static_cast<llvm::ConstantInt* >(arraySize)->getValue().getRawData() : 0);
+
     if (! type->isVoidTy()) {
         auto name = variableDeclaration->getVar()->getValue();
         if (symbolTable.isGlobal()) {
-            // TODO: support global array variables
             value = new llvm::GlobalVariable(module, type, false,
                                      llvm::GlobalValue::CommonLinkage, nullptr, name);
-//            irBuilder.CreateStore(expressionResult, value);
         } else {
             value = irBuilder.CreateAlloca(type, arraySize, name);
             if (expressionResult) {

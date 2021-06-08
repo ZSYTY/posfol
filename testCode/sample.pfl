@@ -9,7 +9,6 @@ float u = (float)y; // default value: 0.0
 bool b = false;
 bool c = true; // default to be false
 func f = [x, b](int arg1, bool arg2)->void {return;}; // func variable must be constant
-int intArray[100]; // every element initialized with default value 0
 
 class A {
     public int a_x;
@@ -67,7 +66,20 @@ void printValue(int x) {
 //    f();
 //}
 
+int globalIntArray[200];
+
 int main() {
+
+    int intArray[100]; // every element initialized with default value 0
+
+    globalIntArray[2] = 10;
+
+    intArray[3] = 20;
+// TODO:
+//    int highDimensionArray[10][10][10];
+//    highDimensionArray[1][2][3] = 666;
+//    int temp = highDimensionArray[3][2][1];
+
     // use llvm to call scanf
     int input_i;
     read(input_i);
@@ -104,7 +116,7 @@ int main() {
     int i;
     for (i = 1; i < 10; i = i + 1) {
         if (ii == 1) {
-            print(ii);
+            print(intArray[10]);
         }
     }
 

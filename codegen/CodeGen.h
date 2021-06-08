@@ -74,7 +74,7 @@ class CodeGen {
     void genFunctionContext(const std::string &name, llvm::Function *function);
     void endFunctionOrBlock();
 
-    llvm::Type *getType(Type);
+    llvm::Type *getType(Type, uint32_t arraySize = 0);
     std::string getFmtStr(llvm::Type *);
     llvm::Value* CastToBoolean(llvm::LLVMContext& context, llvm::Value* condValue);
     llvm::Constant *genConstant(const Identifier *);
