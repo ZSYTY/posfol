@@ -25,6 +25,7 @@
 #include <string>
 #include <fstream>
 #include "../semantic/symbol.h"
+#include <stack>
 
 class CodeGen {
     llvm::LLVMContext llvmContext;
