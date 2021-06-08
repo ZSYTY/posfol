@@ -99,11 +99,11 @@ varible_decl:
 
 varible_decl_type:
     BOOL_TYPE {$$ = new Identifier(Type::BOOLEAN_DEFINE_TYPE);}
-|   CHAR_TYPE  {$$ = new Identifier(Type::CHAR_DEFINE_TYPE); puts("char types");}
-|   INT_TYPE  {$$ = new Identifier(Type::INT_DEFINE_TYPE);  puts("int types")}
+|   CHAR_TYPE  {$$ = new Identifier(Type::CHAR_DEFINE_TYPE);}
+|   INT_TYPE  {$$ = new Identifier(Type::INT_DEFINE_TYPE);}
 |   FLOAT_TYPE  {$$ = new Identifier(Type::FLOAT_DEFINE_TYPE); }
 |   FUNC_TYPE  {$$ = new Identifier(Type::FUNC_DEFINE_TYPE); }
-|   VOID_TYPE {$$ = new Identifier(Type::VOID_DEFINE_TYPE); puts("void func type"); }
+|   VOID_TYPE {$$ = new Identifier(Type::VOID_DEFINE_TYPE); }
 |   ID {$$ = new Identifier(Type::CLASS_DEFINE_TYPE, *($1));}
 ;
 
@@ -405,23 +405,23 @@ function_call:
 
 literal:
     INT {
-        $$ = new Identifier(Type::VALUE, *($1)); 
+        $$ = new Identifier(Type::INT_VALUE, *($1)); 
         //delete $1;
     }
 |   FLOAT {
-        $$ = new Identifier(Type::VALUE, *($1)); 
+        $$ = new Identifier(Type::FLOAT_VALUE, *($1)); 
         //delete $1;
     }
 |   CHAR {
-        $$ = new Identifier(Type::VALUE, *($1)); 
+        $$ = new Identifier(Type::CHAR_VALUE, *($1)); 
         //delete $1;
     }
 |   TRUE {
-        $$ = new Identifier(Type::VALUE, *($1)); 
+        $$ = new Identifier(Type::BOOLEAN_VALUE, *($1)); 
         //delete $1;
     }
 |   FALSE {
-        $$ = new Identifier(Type::VALUE, *($1)); 
+        $$ = new Identifier(Type::BOOLEAN_VALUE, *($1)); 
         //delete $1;
     }
 ;

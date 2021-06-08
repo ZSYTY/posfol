@@ -23,4 +23,7 @@ _deps
 cmake-build-debug/*
 
 *.cbp
-
+*/*.a
+posfol
+build/*
+.vscode/*

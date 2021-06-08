@@ -5,5 +5,8 @@
 #include "../tree/type.h"
 
 bool checkProgram(Block* programBlock);
-bool check(Block* root);
+bool checkBlock(Block* root);
+bool checkDeclaration(Declaration* decl);
+bool checkExpression(Expression* expr);
+bool checkLogicStatement(LogicStatement* logic);
 #endif

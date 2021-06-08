@@ -1,4 +1,4 @@
-int x;
+
 int y = -1; // default value: 0
 char s0;
 char s1 = 'a'; // default value: '\0'
@@ -9,7 +9,6 @@ float u = (float)y; // default value: 0.0
 bool b = false;
 bool c = true; // default to be false
 func f = [x, b](int arg1, bool arg2)->void {return;}; // func variable must be constant
-int intArray[100]; // every element initialized with default value 0
 
 class A {
     public int a_x;
@@ -63,11 +62,24 @@ void printValue(int x) {
     print("\n");
 }
 
-void funcfunc(func f) {
-    f();
-}
+//void funcfunc(func f) {
+//    f();
+//}
+
+int globalIntArray[200];
 
 int main() {
+
+    int intArray[100]; // every element initialized with default value 0
+
+    globalIntArray[2] = 10;
+
+    intArray[3] = 20;
+
+    int highDimensionArray[10][10][10];
+    highDimensionArray[1][2][3] = 666;
+    int temp = highDimensionArray[3][2][1];
+
     // use llvm to call scanf
     int input_i;
     read(input_i);
@@ -77,16 +89,16 @@ int main() {
     read(input_f);
 
     int ii = 0;
+    printValue(ii);
+//    func print_input_f = [ii]()->char {
+//        printValue(ii);
+//        return 'Q';
+//    };
 
-    func print_input_f = [ii]()->char { // pass the address of ii into func, and ref the address when use ii
-        printValue(ii);
-        return 'Q';
-    };
-
-    print_input_f(); // print 0
+//    print_input_f();
 
     func sample_f = [input_s, print_input_f]()->char {
-        funcfunc(print_input_f);
+//        funcfunc(print_input_f);
         return input_s;
     };
 
@@ -94,17 +106,17 @@ int main() {
 
     A copy_a = a;
 
-    a.foo();
+//    a.foo();
 
     B b = new B(2333);
 
     BB inter_b = b;
 
-    b.b_a.foo();
-
-    for (i = 1; i < 10; i += 1) {
-        if (i == 5 && ii == 1) {
-            print(i);
+//    b.b_a.foo();
+    int i;
+    for (i = 1; i < 10; i = i + 1) {
+        if (ii == 1) {
+            print(intArray[10]);
         }
     }
 
