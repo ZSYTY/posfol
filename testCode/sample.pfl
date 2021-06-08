@@ -75,10 +75,10 @@ int main() {
     globalIntArray[2] = 10;
 
     intArray[3] = 20;
-// TODO:
-//    int highDimensionArray[10][10][10];
-//    highDimensionArray[1][2][3] = 666;
-//    int temp = highDimensionArray[3][2][1];
+
+    int highDimensionArray[10][10][10];
+    highDimensionArray[1][2][3] = 666;
+    int temp = highDimensionArray[3][2][1];
 
     // use llvm to call scanf
     int input_i;

@@ -304,21 +304,20 @@ llvm::Value *CodeGen::visit(const VariableDeclaration * variableDeclaration) {
     llvm::Value *value = nullptr;
     auto arraySizes = variableDeclaration->getArraySizes();
     llvm::Value *arraySize = nullptr;
+    auto *sizeList = new std::vector<llvm::ConstantInt *>;
     if (arraySizes) {
-        // TODO:
-        /* Define an array */
-        std::vector<llvm::Value *> sizeList;
+
         for (auto &item : *arraySizes) {
-            sizeList.push_back(visit(item));
+            sizeList->push_back(static_cast<llvm::ConstantInt *>(visit(item)));
         }
 
-        arraySize = sizeList.front();
-        for (int i = 1; i < sizeList.size(); i++) {
-            arraySize = irBuilder.CreateMul(arraySize, sizeList[i]);
+        arraySize = sizeList->front();
+        for (int i = 1; i < sizeList->size(); i++) {
+            arraySize = irBuilder.CreateMul(arraySize, (*sizeList)[i]);
         }
     }
 
-    auto type = getType(varType, arraySizes ? *static_cast<llvm::ConstantInt* >(arraySize)->getValue().getRawData() : 0);
+    auto type = getType(varType, arraySizes ? sizeList : nullptr);
 
     if (! type->isVoidTy()) {
         auto name = variableDeclaration->getVar()->getValue();

@@ -4,7 +4,16 @@
 
 #include "CodeGen.h"
 
-llvm::Type * CodeGen::getType(Type type, uint32_t arraySize) {
+llvm::Type *createArray(llvm::Type *type, std::vector<llvm::ConstantInt *>* sizeList, int idx) {
+    if (idx == sizeList->size()) {
+        return type;
+    } else {
+        return llvm::ArrayType::get(createArray(type, sizeList, idx + 1), *(*sizeList)[idx]->getValue().getRawData());
+    }
+    
+}
+
+llvm::Type * CodeGen::getType(Type type, std::vector<llvm::ConstantInt *>* arraySizeList) {
     llvm::Type* llvmType = nullptr;
     switch (type) {
         case INT_DEFINE_TYPE:
@@ -35,8 +44,9 @@ llvm::Type * CodeGen::getType(Type type, uint32_t arraySize) {
             llvmType = llvm::Type::getVoidTy(llvmContext);
             break;
     }
-    if (arraySize) {
-        return llvm::ArrayType::get(llvmType, arraySize);
+    if (arraySizeList) {
+        return createArray(llvmType, arraySizeList, 0);
+//        return llvm::ArrayType::get(llvmType, arraySize);
     } else {
         return llvmType;
     }
