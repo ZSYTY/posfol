@@ -78,7 +78,8 @@ int main() {
 
     int highDimensionArray[10][10][10];
     highDimensionArray[1][2][3] = 666;
-    int temp = highDimensionArray[3][2][1];
+    int temp;
+    temp = highDimensionArray[3][2][1];
 
     // use llvm to call scanf
     int input_i;

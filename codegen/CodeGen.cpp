@@ -6,6 +6,10 @@
 
 #define ISTYPE(value, id) (value->getType()->getTypeID() == id)
 
+llvm::Value *CodeGen::deRef(llvm::Value *ptr) {
+    return irBuilder.CreateLoad(ptr, "deref");
+};
+
 llvm::Value* CodeGen::CastToBoolean(llvm::LLVMContext& context, llvm::Value* condValue){
     if(ISTYPE(condValue, llvm::Type::IntegerTyID)){
         condValue = irBuilder.CreateIntCast(condValue, llvm::Type::getInt1Ty(context), true);
@@ -268,9 +272,6 @@ llvm::Value *CodeGen::visit(const ClassNewExpression *) {
 
 llvm::Value *CodeGen::visit(const Entity *entity, bool deref) {
 
-    auto deRef = [this](llvm::Value *ptr) {
-        return this->irBuilder.CreateLoad(ptr, "deref");
-    };
     if (entity->getIsTerminal()) {
         return visit(entity->getIdentifier(), deref);
     } else if (entity->getIsArrayIndex()) {
@@ -327,6 +328,9 @@ llvm::Value *CodeGen::visit(const VariableDeclaration * variableDeclaration) {
         } else {
             value = irBuilder.CreateAlloca(type, arraySize, name);
             if (expressionResult) {
+                if (expressionResult->getType()->isPointerTy()) {
+                    expressionResult = deRef(expressionResult);
+                }
                 irBuilder.CreateStore(expressionResult, value);
             }
         }
@@ -545,6 +549,9 @@ llvm::Value *CodeGen::visit(const Expression * expression, bool deref) {
 llvm::Value *CodeGen::visit(const AssignExpression *assignExpression) {
     llvm::Value *target = visit(assignExpression->getEntity());
     llvm::Value *source = visit(assignExpression->getExpr());
+    if (source->getType()->isPointerTy()) {
+        source = deRef(source);
+    }
     irBuilder.CreateStore(source, target);
     return target;
 }

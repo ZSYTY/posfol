@@ -79,6 +79,7 @@ class CodeGen {
     std::string getFmtStr(llvm::Type *);
     llvm::Value* CastToBoolean(llvm::LLVMContext& context, llvm::Value* condValue);
     llvm::Constant *genConstant(const Identifier *);
+    llvm::Value *deRef(llvm::Value *ptr);
 public:
     CodeGen();
 
