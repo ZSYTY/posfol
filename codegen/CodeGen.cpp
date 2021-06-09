@@ -515,6 +515,9 @@ llvm::Value *CodeGen::visit(const IOStatement *ioStatement) {
     } else {
         if (ioStatement->getExpr()) {
             args.push_back(irBuilder.CreateGlobalStringPtr(fmtStr, "fmtStr"));
+            if (value->getType()->isPointerTy()) {
+                value = deRef(value);
+            }
             args.push_back(value);
         } else {
             args.push_back(irBuilder.CreateGlobalStringPtr(ioStatement->getPrintText(), "printStr"));
