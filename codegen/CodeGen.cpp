@@ -502,33 +502,31 @@ llvm::Value *CodeGen::visit(const IOStatement *ioStatement) {
     static llvm::Function *scanfFunc = genCFunction("scanf",
                                                     llvm::Type::getInt32Ty(llvmContext), { llvm::Type::getInt8PtrTy(llvmContext) }, true);
     std::vector<llvm::Value *> args;
-    std::string fmtStr = "";
-    llvm::Value *value = nullptr;
+    args.push_back(irBuilder.CreateGlobalStringPtr(ioStatement->getPrintText(), "formatString"));
 
-//    if (ioStatement->getExpr()) {
-//        value = visit(ioStatement->getExpr());
-//        fmtStr = getFmtStr(value->getType());
-//    } else if (ioStatement->getEntity()) {
-//        value = visit(ioStatement->getEntity());
-//        fmtStr = getFmtStr(value->getType());
-//    }
-//
-//    if (ioStatement->getIsRead()) {
-//        args.push_back(irBuilder.CreateGlobalStringPtr(fmtStr, "fmtStr"));
-//        args.push_back(value);
-//        irBuilder.CreateCall(scanfFunc, args, "readSysFunc");
-//    } else {
-//        if (ioStatement->getExpr()) {
-//            args.push_back(irBuilder.CreateGlobalStringPtr(fmtStr, "fmtStr"));
-//            if (value->getType()->isPointerTy()) {
-//                value = deRef(value);
-//            }
-//            args.push_back(value);
-//        } else {
-//            args.push_back(irBuilder.CreateGlobalStringPtr(ioStatement->getPrintText(), "printStr"));
-//        }
-//        irBuilder.CreateCall(printfFunc, args, "printSysFunc");
-//    }
+    if (ioStatement->getVectorExpression()) {
+        for (auto item : *ioStatement->getVectorExpression()) {
+            llvm::Value *arg = visit(item);
+            auto zero = llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext), 0, true);
+            if (arg->getType()->isPointerTy()) {
+                auto value = deRef(arg);
+                if (value->getType()->isArrayTy()) {
+                    arg = irBuilder.CreateGEP(arg, {zero, zero});
+                } else {
+                    if (!ioStatement->getIsRead()) {
+                        arg = value;
+                    }
+                }
+            }
+            args.push_back(arg);
+        }
+    }
+
+    if (ioStatement->getIsRead()) {
+        irBuilder.CreateCall(scanfFunc, args);
+    } else {
+        irBuilder.CreateCall(printfFunc, args);
+    }
 }
 
 llvm::Value *CodeGen::visit(const Expression * expression, bool deref) {
@@ -550,7 +548,7 @@ llvm::Value *CodeGen::visit(const Expression * expression, bool deref) {
         case INT_VALUE: case LONG_VALUE: case FLOAT_VALUE: case DOUBLE_VALUE: case CHAR_VALUE: case BOOLEAN_VALUE:
             return visit(dynamic_cast<const Identifier *>(expression), true);
         case LAMBDADECLARATION:
-            return visit(dynamic_cast<const LambdaExpression *>(expression), true);
+//            return visit(dynamic_cast<const LambdaExpression *>(expression), true);
         default:
             return nullptr;
     }

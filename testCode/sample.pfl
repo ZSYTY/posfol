@@ -69,6 +69,7 @@ void printValue(int x) {
 int globalIntArray[200];
 
 int main() {
+//    print(10);
 
     int intArray[100]; // every element initialized with default value 0
 
@@ -121,6 +122,10 @@ int main() {
         }
     }
 
+
+    char str[20];
+    read("%s", str);
+    print("%s\n", str);
 
     return 0;
 }
