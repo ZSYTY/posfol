@@ -292,7 +292,12 @@ llvm::Value *CodeGen::visit(const Entity *entity, bool deref) {
         for (const auto &arg : *entity->getVectorExpression()) {
             paramsVal.emplace_back(deRef(visit(arg)));
         }
-        return irBuilder.CreateCall(reinterpret_cast<llvm::Function *>(fn), paramsVal, "call_fn");
+        auto* func = reinterpret_cast<llvm::Function *>(fn);
+        if (func->getReturnType()->isVoidTy()) {
+            return irBuilder.CreateCall(func, paramsVal);
+        } else {
+            return irBuilder.CreateCall(func, paramsVal, "call_fn");
+        }
     } else if (entity->getIsObjectCall()) {
         // TODO:
     }
@@ -500,30 +505,30 @@ llvm::Value *CodeGen::visit(const IOStatement *ioStatement) {
     std::string fmtStr = "";
     llvm::Value *value = nullptr;
 
-    if (ioStatement->getExpr()) {
-        value = visit(ioStatement->getExpr());
-        fmtStr = getFmtStr(value->getType());
-    } else if (ioStatement->getEntity()) {
-        value = visit(ioStatement->getEntity());
-        fmtStr = getFmtStr(value->getType());
-    }
-
-    if (ioStatement->getIsRead()) {
-        args.push_back(irBuilder.CreateGlobalStringPtr(fmtStr, "fmtStr"));
-        args.push_back(value);
-        irBuilder.CreateCall(scanfFunc, args, "readSysFunc");
-    } else {
-        if (ioStatement->getExpr()) {
-            args.push_back(irBuilder.CreateGlobalStringPtr(fmtStr, "fmtStr"));
-            if (value->getType()->isPointerTy()) {
-                value = deRef(value);
-            }
-            args.push_back(value);
-        } else {
-            args.push_back(irBuilder.CreateGlobalStringPtr(ioStatement->getPrintText(), "printStr"));
-        }
-        irBuilder.CreateCall(printfFunc, args, "printSysFunc");
-    }
+//    if (ioStatement->getExpr()) {
+//        value = visit(ioStatement->getExpr());
+//        fmtStr = getFmtStr(value->getType());
+//    } else if (ioStatement->getEntity()) {
+//        value = visit(ioStatement->getEntity());
+//        fmtStr = getFmtStr(value->getType());
+//    }
+//
+//    if (ioStatement->getIsRead()) {
+//        args.push_back(irBuilder.CreateGlobalStringPtr(fmtStr, "fmtStr"));
+//        args.push_back(value);
+//        irBuilder.CreateCall(scanfFunc, args, "readSysFunc");
+//    } else {
+//        if (ioStatement->getExpr()) {
+//            args.push_back(irBuilder.CreateGlobalStringPtr(fmtStr, "fmtStr"));
+//            if (value->getType()->isPointerTy()) {
+//                value = deRef(value);
+//            }
+//            args.push_back(value);
+//        } else {
+//            args.push_back(irBuilder.CreateGlobalStringPtr(ioStatement->getPrintText(), "printStr"));
+//        }
+//        irBuilder.CreateCall(printfFunc, args, "printSysFunc");
+//    }
 }
 
 llvm::Value *CodeGen::visit(const Expression * expression, bool deref) {
@@ -544,6 +549,8 @@ llvm::Value *CodeGen::visit(const Expression * expression, bool deref) {
             return visit(dynamic_cast<const Entity *>(expression), deref);
         case INT_VALUE: case LONG_VALUE: case FLOAT_VALUE: case DOUBLE_VALUE: case CHAR_VALUE: case BOOLEAN_VALUE:
             return visit(dynamic_cast<const Identifier *>(expression), true);
+        case LAMBDADECLARATION:
+            return visit(dynamic_cast<const LambdaExpression *>(expression), true);
         default:
             return nullptr;
     }

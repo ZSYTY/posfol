@@ -488,11 +488,11 @@ return_stmt:
 ;
 
 io_stmt:
-    READ LP entity RP SEMI {
-        $$ = new IOStatement($3);
+    READ LP STRING COMMA expr_list_nonempty RP SEMI {
+        $$ = new IOStatement(*($3), $5, true);
     }
-|   PRINT LP expr RP SEMI {
-        $$ = new IOStatement($3);
+|   PRINT LP STRING COMMA expr_list_nonempty RP SEMI {
+        $$ = new IOStatement(*($3), $5, false);
     }
 |   PRINT LP STRING RP SEMI {
         $$ = new IOStatement(*($3));

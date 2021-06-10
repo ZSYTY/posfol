@@ -58,7 +58,7 @@ class B implements BB { // only one interface can be implemented, and no extendi
 void printValue(int x) {
     // use llvm to call printf (use the type of variable to infer the format string, e.g. "%d", "%s", and "%f")
     print("print from printValue\n");
-    print(x);
+    print("%d", x);
     print("\n");
 }
 
@@ -83,11 +83,11 @@ int main() {
 
     // use llvm to call scanf
     int input_i;
-    read(input_i);
+    read("%d", input_i);
     char input_s;
-    read(input_s);
+    read("%d", input_s);
     float input_f;
-    read(input_f);
+    read("%f", input_f);
 
     int ii = 0;
     printValue(ii);
@@ -117,7 +117,7 @@ int main() {
     int i;
     for (i = 1; i < 10; i = i + 1) {
         if (ii == 1) {
-            print(intArray[10]);
+            print("%d", intArray[10]);
         }
     }
 

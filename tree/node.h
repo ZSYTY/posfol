@@ -658,6 +658,9 @@ class FunctionDeclaration : public Declaration {
     ~FunctionDeclaration() {
         delete returnType;
         delete func;
+        for (auto it = paramList->begin(); it != paramList->end(); ++it) {
+            delete *it;
+        }
         delete paramList;
         delete funcBlock;
     }
@@ -986,32 +989,32 @@ class IOStatement : public LogicStatement {
    private:
     Type type = IOSTATEMENT;
     bool isRead = false;
-    Expression* expr = nullptr;
-    Entity* entity = nullptr;
-    std::string printText = "";
+    std::string formatString = "";
+    std::vector<Expression*>* vectorExpression = nullptr;
 
    public:
-    IOStatement(Expression* expr) : isRead(false), expr(expr) {}
-    IOStatement(Entity* entity) : isRead(true), entity(entity) {}
-    IOStatement(std::string printText) : isRead(false), printText(printText) {}
+    IOStatement(std::string formatString, std::vector<Expression*>* vectorExpression, bool isRead) : formatString(formatString), vectorExpression(vectorExpression), isRead(isRead) {}
+    IOStatement(std::string formatString) : formatString(formatString), isRead(false) {}
     IOStatement() {}
     ~IOStatement() {
-        delete expr;
-        delete entity;
+        if (vectorExpression != nullptr) {
+            for (auto it = vectorExpression->begin(); it != vectorExpression->end(); ++it) {
+                delete *it;
+            }
+            delete vectorExpression;
+        }
     }
 
     Type getType() const override {
         return this->type;
     }
 
-    Expression* getExpr() const {
-        return expr;
+    std::vector<Expression*>* getVectorExpression() const {
+        return vectorExpression;
     }
-    Entity* getEntity() const {
-        return entity;
-    }
+
     std::string getPrintText() const {
-        return printText;
+        return formatString;
     }
     bool getIsRead() const {
         return isRead;
@@ -1019,9 +1022,12 @@ class IOStatement : public LogicStatement {
 
     json genJSON() const override {
         json root;
-        root["name"] = printText != "" ? "IOStatement: " + printText : "IOStatement";
-        expr != nullptr ? root["children"].push_back(expr->genJSON()) : (void)0;
-        entity != nullptr ? root["children"].push_back(entity->genJSON()) : (void)0;
+        root["name"] = formatString != "" ? "IOStatement: " + formatString : "IOStatement";
+        if (vectorExpression != nullptr) {
+            for (auto it = vectorExpression->begin(); it != vectorExpression->end(); ++it) {
+                root["children"].push_back((*it)->genJSON());
+            }
+        }
         return root;
     }
 };
