@@ -90,3 +90,12 @@ llvm::Constant *CodeGen::genConstant(const Identifier *identifier) {
     }
 }
 
+llvm::Constant * CodeGen::getInitValue(llvm::Type *type) {
+    if (type->isIntegerTy()) {
+        return llvm::ConstantInt::get(type, 0);
+    } else if (type->isFloatTy()) {
+        return llvm::ConstantFP::get(type, 0.0);
+    } else {
+        return nullptr;
+    }
+}

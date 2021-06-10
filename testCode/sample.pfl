@@ -10,6 +10,8 @@ bool b = false;
 bool c = true; // default to be false
 func f = [x, b](int arg1, bool arg2)->void {return;}; // func variable must be constant
 
+int globalIntArray[200];
+
 class A {
     public int a_x;
     public int a_y;
@@ -66,7 +68,6 @@ void printValue(int x) {
 //    f();
 //}
 
-int globalIntArray[200];
 
 int main() {
 //    print(10);

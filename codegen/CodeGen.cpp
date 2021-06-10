@@ -36,6 +36,8 @@ void CodeGen::dump(const std::string& outputFileName) {
 void CodeGen::genCode(const Block *root, const std::string& inputFileName, const std::string& outputFileName) {
 //    init(inputFileName);
     rootBlock = root;
+    new llvm::GlobalVariable(module, llvm::Type::getInt1Ty(llvmContext), false,
+                             llvm::GlobalValue::CommonLinkage, getInitValue(llvm::Type::getInt1Ty(llvmContext)), "_#_bool_sc");
     visit(root);
     if (! hasVisitedMainFunction) {
         genMainFunctionContext();
@@ -330,8 +332,18 @@ llvm::Value *CodeGen::visit(const VariableDeclaration * variableDeclaration) {
     if (! type->isVoidTy()) {
         auto name = variableDeclaration->getVar()->getValue();
         if (symbolTable.isGlobal()) {
+            llvm::Constant *initValue = nullptr;
+            if (expressionResult) {
+                if (expressionResult->getType()->isPointerTy()) {
+                    initValue = static_cast<llvm::Constant *>(deRef(expressionResult));
+                } else {
+                    initValue = static_cast<llvm::Constant *>(expressionResult);
+                }
+            } else {
+                initValue = getInitValue(type);
+            }
             value = new llvm::GlobalVariable(module, type, false,
-                                     llvm::GlobalValue::CommonLinkage, nullptr, name);
+                                     llvm::GlobalValue::CommonLinkage, initValue, name);
         } else {
             value = irBuilder.CreateAlloca(type, arraySize, name);
             if (expressionResult) {
@@ -504,7 +516,7 @@ llvm::Value *CodeGen::visit(const IOStatement *ioStatement) {
     static llvm::Function *scanfFunc = genCFunction("scanf",
                                                     llvm::Type::getInt32Ty(llvmContext), { llvm::Type::getInt8PtrTy(llvmContext) }, true);
     std::vector<llvm::Value *> args;
-    args.push_back(irBuilder.CreateGlobalStringPtr(ioStatement->getPrintText(), "formatString"));
+    args.push_back(irBuilder.CreateGlobalStringPtr(ioStatement->getPrintText(), "formatString", 0, &module));
 
     if (ioStatement->getVectorExpression()) {
         for (auto item : *ioStatement->getVectorExpression()) {
