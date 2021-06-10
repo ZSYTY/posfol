@@ -84,6 +84,7 @@ public:
     CodeGen();
 
     void genCode(const Block *root, const std::string& inputFileName, const std::string& outputFileName);
+    void genBinary(const Block *root, const std::string& inputFileName, const std::string& outputFileName);
 
     llvm::Value *visit(const LambdaExpression *lambdaExpression);
 };

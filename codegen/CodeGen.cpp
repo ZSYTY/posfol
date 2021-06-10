@@ -27,14 +27,10 @@ void CodeGen::init(const std::string& inputFileName) {
 }
 
 void CodeGen::dump(const std::string& outputFileName) {
-    std::string output;
-    llvm::raw_string_ostream out(output);
     this->module.print(llvm::outs(), nullptr);
-
-    std::cout << output << std::endl;
-    std::ofstream os(outputFileName);
-    os << output << std::endl; // TODO: cannot output to file
-//    module.dump();
+    std::error_code EC;
+    llvm::raw_fd_ostream os(outputFileName, EC);
+    this->module.print(os, nullptr);
 }
 
 void CodeGen::genCode(const Block *root, const std::string& inputFileName, const std::string& outputFileName) {
@@ -45,6 +41,12 @@ void CodeGen::genCode(const Block *root, const std::string& inputFileName, const
         genMainFunctionContext();
     }
     dump(outputFileName);
+}
+
+void CodeGen::genBinary(const Block *root, const std::string &inputFileName, const std::string &outputFileName) {
+    genCode(root, inputFileName, "a.ll");
+    system("llc a.ll");
+    system(("gcc -o " + outputFileName + " -lm a.ll").c_str());
 }
 
 CodeGen::CodeGen(): module("posfol", llvmContext), irBuilder(llvmContext) {

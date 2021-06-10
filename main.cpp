@@ -116,8 +116,8 @@ int main(int argc, char **argv) {
     checkProgram(programBlock);
 
     CodeGen codeGen;
-    codeGen.genCode(programBlock, input_name, output_name.empty() ? "a.ll" : output_name);
-
+//    codeGen.genCode(programBlock, input_name, output_name.empty() ? "a.ll" : output_name);
+    codeGen.genBinary(programBlock, input_name, output_name.empty() ? "a.out" : output_name);
 
     std::cout << "Hello posfol!" << std::endl;
     return 0;
