@@ -7,7 +7,11 @@
 #define ISTYPE(value, id) (value->getType()->getTypeID() == id)
 
 llvm::Value *CodeGen::deRef(llvm::Value *ptr) {
-    return irBuilder.CreateLoad(ptr, "deref");
+    if (ptr->getType()->isPointerTy()) {
+        return irBuilder.CreateLoad(ptr, "deref");
+    } else {
+        return ptr;
+    }
 };
 
 llvm::Value* CodeGen::CastToBoolean(llvm::LLVMContext& context, llvm::Value* condValue){
@@ -280,7 +284,7 @@ llvm::Value *CodeGen::visit(const Entity *entity, bool deref) {
     } else if (entity->getIsArrayIndex()) {
         // TODO:
         llvm::Value* array = visit(entity->getEntity());
-        llvm::Value* indexExpr = visit(entity->getExpression());
+        llvm::Value* indexExpr = visit(entity->getExpression(), true);
         llvm::Value* result = irBuilder.CreateGEP(array, {llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext), 0, true), indexExpr});
         if (deref and result->getType()->isPointerTy()) {
             result = deRef(result);
