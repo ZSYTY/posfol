@@ -254,7 +254,7 @@ llvm::Value *CodeGen::visit(const BinaryOperator *binaryOperator) {
 llvm::Value *CodeGen::visit(const UnaryOperator *unaryOperator) {
     llvm::Value *hs = visit(unaryOperator->getHs());
     bool isFP = hs->getType()->isFloatTy();
-    switch (unaryOperator->getType()) {
+    switch (unaryOperator->getOp()) {
         case 0: // -
             return isFP ? irBuilder.CreateFNeg(hs, "negResult") : irBuilder.CreateNeg(hs, "negResult");
         case 1: // !
