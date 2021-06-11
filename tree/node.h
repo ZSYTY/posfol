@@ -1011,9 +1011,44 @@ class IOStatement : public LogicStatement {
     std::string formatString = "";
     std::vector<Expression*>* vectorExpression = nullptr;
 
+    void prepareString() {
+        std::string rst;
+        std::string::const_iterator it = formatString.begin();
+        while (it != formatString.end())
+        {
+            char c = *it++;
+            if (c == '\\' && it != formatString.end())
+            {
+                switch (*it++) {
+                    case '\'': c = '\''; break;
+                    case '\"': c = '\"'; break;
+                    case '\?': c = '\?'; break;
+                    case '\\': c = '\\'; break;
+                    case 'a': c = '\a'; break;
+                    case 'b': c = '\b'; break;
+                    case 'f': c = '\f'; break;
+                    case 'n': c = '\n'; break;
+                    case 'r': c = '\r'; break;
+                    case 't': c = '\t'; break;
+                    case 'v': c = '\v'; break;
+                        // all other escapes
+                    default:
+                        // invalid escape sequence - skip it.
+                        continue;
+                }
+            }
+            rst += c;
+        }
+        formatString = rst;
+    }
+
    public:
-    IOStatement(std::string formatString, std::vector<Expression*>* vectorExpression, bool isRead) : formatString(formatString), vectorExpression(vectorExpression), isRead(isRead) {}
-    IOStatement(std::string formatString) : formatString(formatString), isRead(false) {}
+    IOStatement(std::string formatString, std::vector<Expression*>* vectorExpression, bool isRead) : formatString(formatString), vectorExpression(vectorExpression), isRead(isRead) {
+        prepareString();
+    }
+    IOStatement(std::string formatString) : formatString(formatString), isRead(false) {
+        prepareString();
+    }
     IOStatement() {}
     ~IOStatement() {
         if (vectorExpression != nullptr) {
