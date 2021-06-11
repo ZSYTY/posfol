@@ -97,6 +97,8 @@ llvm::Constant * CodeGen::getInitValue(llvm::Type *type) {
         return llvm::ConstantInt::get(type, 0);
     } else if (type->isFloatTy()) {
         return llvm::ConstantFP::get(type, 0.0);
+    } else if (type->isArrayTy()) {
+        return llvm::ConstantAggregateZero::get(type);
     } else {
         return nullptr;
     }

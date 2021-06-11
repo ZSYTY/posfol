@@ -252,7 +252,7 @@ llvm::Value *CodeGen::visit(const BinaryOperator *binaryOperator) {
 }
 
 llvm::Value *CodeGen::visit(const UnaryOperator *unaryOperator) {
-    llvm::Value *hs = visit(unaryOperator->getHs());
+    llvm::Value *hs = visit(unaryOperator->getHs(), true);
     bool isFP = hs->getType()->isFloatTy();
     switch (unaryOperator->getOp()) {
         case 0: // -
@@ -281,7 +281,11 @@ llvm::Value *CodeGen::visit(const Entity *entity, bool deref) {
         // TODO:
         llvm::Value* array = visit(entity->getEntity());
         llvm::Value* indexExpr = visit(entity->getExpression());
-        return irBuilder.CreateGEP(array, {llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext), 0, true), indexExpr});
+        llvm::Value* result = irBuilder.CreateGEP(array, {llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext), 0, true), indexExpr});
+        if (deref and result->getType()->isPointerTy()) {
+            result = deRef(result);
+        }
+        return result;
     } else if (entity->getIsFunctionCall()) {
         auto fn = visit(entity->getEntity());
 //        auto deRef = [this](llvm::Value *ptr) {
@@ -302,7 +306,11 @@ llvm::Value *CodeGen::visit(const Entity *entity, bool deref) {
         if (func->getReturnType()->isVoidTy()) {
             return irBuilder.CreateCall(func, paramsVal);
         } else {
-            return irBuilder.CreateCall(func, paramsVal, "call_fn");
+            llvm::Value *returnValue = irBuilder.CreateCall(func, paramsVal, "call_fn");
+            if (deref and returnValue->getType()->isPointerTy()) {
+                returnValue = deRef(returnValue);
+            }
+            return returnValue;
         }
     } else if (entity->getIsObjectCall()) {
         // TODO:
@@ -350,7 +358,7 @@ llvm::Value *CodeGen::visit(const VariableDeclaration * variableDeclaration) {
                 initValue = getInitValue(type);
             }
             value = new llvm::GlobalVariable(module, type, false,
-                                     llvm::GlobalValue::ExternalLinkage, initValue, name);
+                                     llvm::GlobalValue::CommonLinkage, initValue, name);
         } else {
             value = irBuilder.CreateAlloca(type, arraySize, name);
             if (expressionResult) {

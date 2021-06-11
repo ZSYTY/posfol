@@ -10,7 +10,7 @@ bool b = false;
 bool c = true; // default to be false
 //func f<void(int, bool)> = [x, b](int arg1, bool arg2)->void {return;}; // func variable must be constant
 
-// int globalIntArray[200];
+int globalIntArray[200];
 
 class A {
     public int a_x;
@@ -72,6 +72,15 @@ void printValue(int x) {
 
 int main() {
 //    print(10);
+    int testa;
+    int testb;
+    read("%d%d", testa, testb);
+    int testc;
+    testc = testa + testb;
+    print("%d\n", testc);
+    read("%d%d", globalIntArray[0], globalIntArray[1]);
+    globalIntArray[2] = globalIntArray[0] + globalIntArray[1];
+    print("%d\n", globalIntArray[2]);
 
     int intArray[100]; // every element initialized with default value 0
 
