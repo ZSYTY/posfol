@@ -2,39 +2,41 @@ int a[10005];
 int N;
 
 void quick_sort(int left, int right) {
-    int i = left + 1;
-    int j = right;
-    int pivot = a[left];
-    while(i <= j) {
-        while(i <= j && a[i] <= pivot) {
-            i++;
+    if (left < right) {
+        int i = left + 1;
+        int j = right;
+        int pivot = a[left];
+        while (i <= j) {
+            while (i <= j && a[i] <= pivot) {
+                i = i + 1;
+            }
+            while (i <= j && a[j] >= pivot) {
+                j = j - 1;
+            }
+            if (i <= j) {
+                int tmp = a[i];
+                a[i] = a[j];
+                a[j] = tmp;
+            }
         }
-        while(i <= j && a[j] >= pivot) {
-            j--;
-        }
-        if(i <= j) {
-            int tmp = a[i];
-            a[i] = a[j];
-            a[j] = tmp;
-        }
+        int tmp = a[left];
+        a[left] = a[j];
+        a[j] = tmp;
+        quick_sort(left, j - 1);
+        quick_sort(j + 1, right);
     }
-    int tmp = a[left];
-    a[left] = a[j];
-    a[j] = tmp;
-    quick_sort(left, j - 1);
-    quick_sort(j + 1, right);
+    return;
 }
 
 int main() {
-    read(N);
+    read("%d", N);
     int i;
-    for(i = 0; i < N; i++) {
-        read(a[i]);
+    for (i = 0; i < N; i = i + 1) {
+        read("%d", a[i]);
     }
     quick_sort(0, N - 1);
-    for(i = 0; i < N; i++) {
-        print(a[i]);
-        print("\n");
+    for (i = 0; i < N; i = i + 1) {
+        print("%d\n", a[i]);
     }
     return 0;
 }

@@ -40,7 +40,7 @@ class CodeGen {
 //    std::unordered_map<const Declaration*, llvm::Function *> llvmFunctionTable;
 
     llvm::Value *visit(const Statement *);
-    llvm::BasicBlock *visit(const Block *, bool shouldCreateNewBlock = false);
+    llvm::BasicBlock *visit(const Block *, bool shouldCreateNewBlock = false, std::string blockName = "");
     llvm::Value *visit(const Expression *, bool deref = false);
     llvm::Value *visit(const Identifier *, bool deref = false);
     llvm::Value *visit(const ArithmeticExpression *);

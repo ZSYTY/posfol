@@ -166,7 +166,7 @@ llvm::Value *CodeGen::visit(const Statement *stmt) {
     }
 }
 
-llvm::BasicBlock *CodeGen::visit(const Block *block, bool shouldCreateNewBlock) {
+llvm::BasicBlock *CodeGen::visit(const Block *block, bool shouldCreateNewBlock, std::string blockName) {
     if (block == nullptr) {
         return nullptr;
     }
@@ -176,7 +176,7 @@ llvm::BasicBlock *CodeGen::visit(const Block *block, bool shouldCreateNewBlock) 
     }
     if (! symbolTable.isGlobal() and shouldCreateNewBlock) {
         llvm::Function *function = irBuilder.GetInsertBlock()->getParent();
-        BB = llvm::BasicBlock::Create(llvmContext, "", function);
+        BB = llvm::BasicBlock::Create(llvmContext, blockName, function);
         irBuilder.SetInsertPoint(BB);
     }
     for (auto stmt : *block->getStatementList()) {
@@ -436,6 +436,7 @@ llvm::Value *CodeGen::visit(const FunctionDeclaration *functionDeclaration) {
             irBuilder.CreateStore(&argItem, visit(varDeclaration));
         }
     }
+    symbolTable.push(name, functionDeclaration);
     visit(functionDeclaration->getFuncBlock());
     endFunctionOrBlock();
     symbolTable.push(name, functionDeclaration);
@@ -454,22 +455,24 @@ llvm::Value *CodeGen::visit(const IfStatement *ifStatement) {
     llvm::Function* theFunction = irBuilder.GetInsertBlock()->getParent();
     llvm::Value* condValue = visit(ifStatement->getCondition());
     llvm::BasicBlock* beforeBlock = irBuilder.GetInsertBlock();
-    llvm::BasicBlock* trueBlock = visit(ifStatement->getTrueBlock(), true);
-    llvm::BasicBlock* falseBlock = visit(ifStatement->getFalseBlock(), true);
+    llvm::BasicBlock* trueBlock = visit(ifStatement->getTrueBlock(), true, "trueBlock");
+    llvm::BasicBlock* afterTrueBlock = irBuilder.GetInsertBlock();
+    llvm::BasicBlock* falseBlock = visit(ifStatement->getFalseBlock(), true, "falseBlock");
+    llvm::BasicBlock* afterFalseBlock = irBuilder.GetInsertBlock();
     llvm::BasicBlock* afterBlock = llvm::BasicBlock::Create(llvmContext, "after", theFunction);
     if (falseBlock) {
         irBuilder.SetInsertPoint(beforeBlock);
         irBuilder.CreateCondBr(CastToBoolean(llvmContext, condValue), trueBlock, falseBlock);
-        irBuilder.SetInsertPoint(trueBlock);
+        irBuilder.SetInsertPoint(afterTrueBlock);
         irBuilder.CreateBr(afterBlock);
-        irBuilder.SetInsertPoint(falseBlock);
+        irBuilder.SetInsertPoint(afterFalseBlock);
         irBuilder.CreateBr(afterBlock);
         irBuilder.SetInsertPoint(afterBlock);
 //        irBuilder.SetInsertPoint();
     } else {
         irBuilder.SetInsertPoint(beforeBlock);
         irBuilder.CreateCondBr(CastToBoolean(llvmContext, condValue), trueBlock, afterBlock);
-        irBuilder.SetInsertPoint(trueBlock);
+        irBuilder.SetInsertPoint(afterTrueBlock);
         irBuilder.CreateBr(afterBlock);
         irBuilder.SetInsertPoint(afterBlock);
     }
