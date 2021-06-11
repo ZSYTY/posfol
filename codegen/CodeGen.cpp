@@ -386,12 +386,15 @@ llvm::Value *CodeGen::visit(const LambdaExpression *lambdaExpression) {
 
     int idx = 0;
     for (auto &argItem : function->args()) {
-
-        auto varDeclaration = idx < outerArgsDecl->size()
-                ? outerArgsDecl->at(idx++)
-                : lambdaExpression->getParamList()->at(idx++ - outerArgsDecl->size());
-        argItem.setName(varDeclaration->getVar()->getValue());
-        irBuilder.CreateStore(&argItem, visit(varDeclaration));
+        VariableDeclaration *variableDeclaration = nullptr;
+        if (idx < outerArgsDecl->size()) {
+            auto originalDeclaration = outerArgsDecl->at(idx++);
+            variableDeclaration = new VariableDeclaration(originalDeclaration->getVarType(), originalDeclaration->getVar());
+        } else {
+            variableDeclaration = lambdaExpression->getParamList()->at(idx++ - outerArgsDecl->size());
+        }
+        argItem.setName(variableDeclaration->getVar()->getValue());
+        irBuilder.CreateStore(&argItem, visit(variableDeclaration));
     }
     lambdaOuterArgsTable[function] = outerArgs;
     visit(lambdaExpression->getFuncBlock());
