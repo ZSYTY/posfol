@@ -1,0 +1,55 @@
+int M_a, N_a;
+int M_b, N_b;
+int M_c, N_c;
+
+int a[20][20];
+int b[20][20];
+int c[20][20];
+
+void printC(int i, int j) {
+    int tmp = c[i][j];
+    int bits = 0;
+    while(tmp) {
+        tmp = tmp / 10;
+        bits = bits + 1;
+    }
+}
+
+int main() {
+    int i, j;
+    read(M_a);
+    read(N_a);
+    for(i = 0; i < M_a; i++) {
+        for(j = 0; j < N_a; j++) {
+            read(a[i][j]);
+        }
+    }
+    read(M_b);
+    read(N_b);
+    for(i = 0; i < M_b; i++) {
+        for(j = 0; j < N_b; j++) {
+            read(b[i][j]);
+        }
+    }
+
+    if(N_a != M_b) {
+        print("Incompatible Dimensions");
+    } else {
+        M_c = M_a;
+        N_c = N_b;
+        for(i = 0; i < M_c; i++) {
+            for(j = 0; j < N_c; j++) {
+                int tmp = 0;
+                int k;
+                for(k = 0; k < N_a; k++) {
+                    tmp += a[i][k] * b[k][j];
+                }
+                c[i][j] = tmp;
+
+                print("%10d" ,c[i][j]);
+            }
+            print("\n");
+        }
+    }
+    return 0;
+}
