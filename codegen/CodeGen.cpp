@@ -162,7 +162,7 @@ llvm::Value *CodeGen::visit(const Statement *stmt) {
     }
 }
 
-llvm::BasicBlock *CodeGen::visit(const Block *block) {
+llvm::BasicBlock *CodeGen::visit(const Block *block, bool shouldCreateNewBlock) {
     if (block == nullptr) {
         return nullptr;
     }
@@ -170,7 +170,7 @@ llvm::BasicBlock *CodeGen::visit(const Block *block) {
     if (block != rootBlock) {
         symbolTable.pushAR();
     }
-    if (! symbolTable.isGlobal()) {
+    if (! symbolTable.isGlobal() and shouldCreateNewBlock) {
         llvm::Function *function = irBuilder.GetInsertBlock()->getParent();
         BB = llvm::BasicBlock::Create(llvmContext, "", function);
         irBuilder.SetInsertPoint(BB);
@@ -487,10 +487,10 @@ llvm::Value *CodeGen::visit(const IfStatement *ifStatement) {
     llvm::Function* theFunction = irBuilder.GetInsertBlock()->getParent();
     llvm::Value* condValue = visit(ifStatement->getCondition());
     llvm::BasicBlock* beforeBlock = irBuilder.GetInsertBlock();
-    llvm::BasicBlock* trueBlock = visit(ifStatement->getTrueBlock());
-    llvm::BasicBlock* falseBlock = visit(ifStatement->getFalseBlock());
+    llvm::BasicBlock* trueBlock = visit(ifStatement->getTrueBlock(), true);
+    llvm::BasicBlock* falseBlock = visit(ifStatement->getFalseBlock(), true);
     llvm::BasicBlock* afterBlock = llvm::BasicBlock::Create(llvmContext, "after", theFunction);
-    if(falseBlock) {
+    if (falseBlock) {
         irBuilder.SetInsertPoint(beforeBlock);
         irBuilder.CreateCondBr(CastToBoolean(llvmContext, condValue), trueBlock, falseBlock);
         irBuilder.SetInsertPoint(trueBlock);
@@ -502,6 +502,8 @@ llvm::Value *CodeGen::visit(const IfStatement *ifStatement) {
     } else {
         irBuilder.SetInsertPoint(beforeBlock);
         irBuilder.CreateCondBr(CastToBoolean(llvmContext, condValue), trueBlock, afterBlock);
+        irBuilder.SetInsertPoint(trueBlock);
+        irBuilder.CreateBr(afterBlock);
         irBuilder.SetInsertPoint(afterBlock);
     }
 }
