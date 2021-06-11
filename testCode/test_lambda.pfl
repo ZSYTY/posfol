@@ -1,0 +1,11 @@
+
+int main() {
+    int ii = 0;
+    func print_input_f<char()> = [ii]()->void {
+        print("%d", ii);
+        return;
+    };
+
+    print_input_f();
+    return 0;
+}
