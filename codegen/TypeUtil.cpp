@@ -13,7 +13,7 @@ llvm::Type *createArray(llvm::Type *type, std::vector<llvm::ConstantInt *>* size
     
 }
 
-llvm::Type * CodeGen::getType(Type type, std::vector<llvm::ConstantInt *>* arraySizeList) {
+llvm::Type * CodeGen::getType(Type type, std::vector<llvm::ConstantInt *>* arraySizeList, llvm::FunctionType * lambdaType) {
     llvm::Type* llvmType = nullptr;
     switch (type) {
         case INT_DEFINE_TYPE:
@@ -39,6 +39,8 @@ llvm::Type * CodeGen::getType(Type type, std::vector<llvm::ConstantInt *>* array
         case CHAR_DEFINE_TYPE:
         case CHAR_VALUE:
             llvmType = llvm::Type::getInt8Ty(llvmContext);
+            break;
+        case FUNC_DEFINE_TYPE:
             break;
         default:
             llvmType = llvm::Type::getVoidTy(llvmContext);

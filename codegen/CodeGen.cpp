@@ -198,7 +198,6 @@ llvm::Value *CodeGen::visit(const Identifier *identifier, bool deref) {
             return value;
         }
     } else {
-        std::cout << "constant" << std::endl;
         return genConstant(identifier);
     }
 }
@@ -289,12 +288,15 @@ llvm::Value *CodeGen::visit(const Entity *entity, bool deref) {
 //            return this->irBuilder.CreateLoad(ptr, "deref");
 //        };
         std::vector<llvm::Value *> paramsVal;
-//        auto pregs = lambdaOuterArgsTable[reinterpret_cast<llvm::Function*>(fn)];
-//        for (const auto &preg : *pregs) {
-//            paramsVal.emplace_back(preg);
+//        if (lambdaOuterArgsTable.find(reinterpret_cast<llvm::Function*>(fn)) != lambdaOuterArgsTable.end()) {
+//            auto pregs = lambdaOuterArgsTable[reinterpret_cast<llvm::Function*>(fn)];
+//            for (const auto &preg : *pregs) {
+//                paramsVal.emplace_back(preg);
+//            }
 //        }
         for (const auto &arg : *entity->getVectorExpression()) {
-            paramsVal.emplace_back(deRef(visit(arg)));
+            auto expr = visit(arg);
+            paramsVal.emplace_back(deRef(expr));
         }
         auto* func = reinterpret_cast<llvm::Function *>(fn);
         if (func->getReturnType()->isVoidTy()) {
@@ -329,7 +331,12 @@ llvm::Value *CodeGen::visit(const VariableDeclaration * variableDeclaration) {
 
     auto type = getType(varType, arraySizes ? sizeList : nullptr);
 
-    if (! type->isVoidTy()) {
+    if (varType == FUNC_DEFINE_TYPE) {
+        auto name = variableDeclaration->getVar()->getValue();
+        value = expressionResult;
+        symbolTable.push(name, variableDeclaration);
+        llvmSymbolTable[variableDeclaration] = value;
+    } else if (! type->isVoidTy()) {
         auto name = variableDeclaration->getVar()->getValue();
         if (symbolTable.isGlobal()) {
             llvm::Constant *initValue = nullptr;
@@ -362,21 +369,82 @@ llvm::Value *CodeGen::visit(const VariableDeclaration * variableDeclaration) {
 llvm::Value *CodeGen::visit(const LambdaExpression *lambdaExpression) {
     std::vector<llvm::Type *> args;
     auto* outerArgs = new std::vector<llvm::Value *>();
-    for (auto item : *lambdaExpression->getOuterVars()) {
-        outerArgs->push_back(visit(item));
-        args.push_back(getType(symbolTable.findSymbol(item->getValue())->getType()));
-    }
+//        auto outerArgDecl = dynamic_cast<const VariableDeclaration*>(symbolTable.findSymbol(item->getValue()));
+//        llvm::FunctionType *lambdaType = nullptr;
+//        auto lambdaReturnType = outerArgDecl->getFuncReturnType();
+//        auto lambdaParaTypeList = outerArgDecl->getFuncParaList();
+//        if (lambdaReturnType) {
+//            std::vector<llvm::Type *> lambdaArgs;
+//            for (auto &para : *lambdaParaTypeList) {
+//                lambdaArgs.push_back(getType(para->getType()));
+//            }
+//            if (!lambdaArgs.empty()) {
+//                llvm::ArrayRef<llvm::Type *> argsRef(lambdaArgs);
+//                lambdaType = llvm::FunctionType::get(getType(lambdaReturnType->getType()), argsRef, false);
+//            } else {
+//                lambdaType = llvm::FunctionType::get(getType(lambdaReturnType->getType()), false);
+//            }
+//        }
+//        args.push_back(llvm::PointerType::get(getType(outerArgDecl->getVarType()->getType(), nullptr, lambdaType), 0));
     for (auto item : *lambdaExpression->getParamList()) {
-        args.push_back(getType(item->getType()));
+        llvm::FunctionType *lambdaType = nullptr;
+        auto lambdaReturnType = item->getFuncReturnType();
+        auto lambdaParaTypeList = item->getFuncParaList();
+        if (lambdaReturnType) {
+            std::vector<llvm::Type *> lambdaArgs;
+            for (auto &para : *lambdaParaTypeList) {
+                lambdaArgs.push_back(getType(para->getType()));
+            }
+            if (!lambdaArgs.empty()) {
+                llvm::ArrayRef<llvm::Type *> argsRef(lambdaArgs);
+                lambdaType = llvm::FunctionType::get(getType(lambdaReturnType->getType()), lambdaArgs, false);
+            } else {
+                lambdaType = llvm::FunctionType::get(getType(lambdaReturnType->getType()), false);
+            }
+        }
+        args.push_back(getType(item->getVarType()->getType(), nullptr, lambdaType));
     }
 
     llvm::Function *function = genCFunction("lambda", getType(lambdaExpression->getReturnType()->getType()), args, false);
     genFunctionContext("lambda", function);
 
-    lambdaOuterArgsTable[function] = outerArgs;
+    int idx = 0;
+    for (auto &argItem : function->args()) {
 
+        auto varDeclaration = lambdaExpression->getParamList()->at(idx++);
+        argItem.setName(varDeclaration->getVar()->getValue());
+        irBuilder.CreateStore(&argItem, visit(varDeclaration));
+    }
+
+    for (auto item : *lambdaExpression->getOuterVars()) {
+        auto outerArg = visit(item, true);
+        outerArgs->push_back(outerArg);
+        auto outerArgDecl = dynamic_cast<const VariableDeclaration*>(symbolTable.findSymbol(item->getValue()));
+        auto varType = outerArgDecl->getVarType()->getType();
+        auto arraySizes = outerArgDecl->getArraySizes();
+        llvm::Value *arraySize = nullptr;
+        auto *sizeList = new std::vector<llvm::ConstantInt *>;
+        if (arraySizes) {
+
+            for (auto &item : *arraySizes) {
+                sizeList->push_back(static_cast<llvm::ConstantInt *>(visit(item)));
+            }
+
+            arraySize = sizeList->front();
+            for (int i = 1; i < sizeList->size(); i++) {
+                arraySize = irBuilder.CreateMul(arraySize, (*sizeList)[i]);
+            }
+        }
+        auto type = getType(varType, arraySizes ? sizeList : nullptr);
+        auto outerValue = irBuilder.CreateAlloca(type, arraySize, outerArgDecl->getVar()->getValue());
+        irBuilder.CreateStore(outerArg, outerValue);
+        symbolTable.push(outerArgDecl->getVar()->getValue(), outerArgDecl);
+        llvmSymbolTable[outerArgDecl] = outerValue;
+    }
+    lambdaOuterArgsTable[function] = outerArgs;
     visit(lambdaExpression->getFuncBlock());
     endFunctionOrBlock();
+
     return function;
 }
 
@@ -506,8 +574,12 @@ llvm::Value *CodeGen::visit(const WhileStatement *whileStatement) {
 }
 
 llvm::Value *CodeGen::visit(const ReturnStatement *returnStatement) {
-    llvm::Value *returnValue = visit(returnStatement->getReturnExpr());
-    return irBuilder.CreateRet(returnValue);
+    if (returnStatement->getReturnExpr()) {
+        llvm::Value *returnValue = visit(returnStatement->getReturnExpr());
+        return irBuilder.CreateRet(returnValue);
+    } else {
+        return irBuilder.CreateRetVoid();
+    }
 }
 
 llvm::Value *CodeGen::visit(const IOStatement *ioStatement) {
@@ -562,7 +634,7 @@ llvm::Value *CodeGen::visit(const Expression * expression, bool deref) {
         case INT_VALUE: case LONG_VALUE: case FLOAT_VALUE: case DOUBLE_VALUE: case CHAR_VALUE: case BOOLEAN_VALUE:
             return visit(dynamic_cast<const Identifier *>(expression), true);
         case LAMBDADECLARATION:
-//            return visit(dynamic_cast<const LambdaExpression *>(expression), true);
+            return visit(dynamic_cast<const LambdaExpression *>(expression));
         default:
             return nullptr;
     }

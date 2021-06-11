@@ -100,6 +100,13 @@ RETURN return
 }
 {STRING} {
     std::string string_yy(yytext);
+    size_t start_pos = 0;
+    std::string from = "\\\\";
+    std::string to = "\\";
+    while((start_pos = string_yy.find(from, start_pos)) != std::string::npos) {
+        string_yy.replace(start_pos, std::string(from).length(), to);
+        start_pos += to.length();
+    }
     yylval.val = new std::string(string_yy.begin() + 1, string_yy.end() - 1);
     return STRING;
 }

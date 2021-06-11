@@ -514,6 +514,8 @@ class VariableDeclaration : public Declaration {
     Identifier* var = nullptr;
     Expression* expr = nullptr;
     std::vector<Expression*>* arraySizes = nullptr;
+    Identifier* funcReturnType = nullptr;
+    std::vector<Identifier*>* funcParaList = nullptr;
 
    public:
     // 构造函数1：如int a;
@@ -522,7 +524,10 @@ class VariableDeclaration : public Declaration {
     VariableDeclaration(Identifier* varType, Identifier* var, Expression* expr) : varType(varType), var(var), expr(expr) {}
     // 构造函数4：如int a[100][10];
     VariableDeclaration(Identifier* varType, Identifier* var, std::vector<Expression*>* arraySizes) : varType(varType), var(var), arraySizes(arraySizes) {}
-
+    // 构造函数5:如func f<int(int, float)> = []() {}
+    VariableDeclaration(Identifier* varType, Identifier* var, Identifier* funcReturnType, std::vector<Identifier*>* funcParaList, Expression* expr) : varType(varType), var(var), expr(expr), funcReturnType(funcReturnType), funcParaList(funcParaList) {}
+    // 构造函数6:如func f<char()> ——仅限于函数参数声明
+    VariableDeclaration(Identifier* varType, Identifier* var, Identifier* funcReturnType, std::vector<Identifier*>* funcParaList) : varType(varType), var(var), funcReturnType(funcReturnType), funcParaList(funcParaList) {}
     ~VariableDeclaration() {
         delete varType;
         delete var;
@@ -556,14 +561,28 @@ class VariableDeclaration : public Declaration {
         return this->arraySizes;
     }
 
+    Identifier* getFuncReturnType() const {
+        return this->funcReturnType;
+    }
+
+    std::vector<Identifier*>* getFuncParaList() const {
+        return this->funcParaList;
+    }
+
     json genJSON() const override {
         json root;
         root["name"] = "VariableDeclaration";
         varType != nullptr ? root["children"].push_back(varType->genJSON()) : (void)0;
         var != nullptr ? root["children"].push_back(var->genJSON()) : (void)0;
         expr != nullptr ? root["children"].push_back(expr->genJSON()) : (void)0;
+        funcReturnType != nullptr ? root["children"].push_back(funcReturnType->genJSON()) : (void)0;
         if (arraySizes != nullptr) {
             for (auto it = arraySizes->begin(); it != arraySizes->end(); ++it) {
+                root["children"].push_back((*it)->genJSON());
+            }
+        }
+        if (funcParaList != nullptr) {
+            for (auto it = funcParaList->begin(); it != funcParaList->end(); ++it) {
                 root["children"].push_back((*it)->genJSON());
             }
         }
