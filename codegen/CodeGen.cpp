@@ -350,7 +350,7 @@ llvm::Value *CodeGen::visit(const VariableDeclaration * variableDeclaration) {
                 initValue = getInitValue(type);
             }
             value = new llvm::GlobalVariable(module, type, false,
-                                     llvm::GlobalValue::CommonLinkage, initValue, name);
+                                     llvm::GlobalValue::ExternalLinkage, initValue, name);
         } else {
             value = irBuilder.CreateAlloca(type, arraySize, name);
             if (expressionResult) {
