@@ -514,6 +514,8 @@ class VariableDeclaration : public Declaration {
     Identifier* var = nullptr;
     Expression* expr = nullptr;
     std::vector<Expression*>* arraySizes = nullptr;
+    Identifier* funcReturnType = nullptr;
+    std::vector<Identifier*>* funcParaList = nullptr;
 
    public:
     // 构造函数1：如int a;
@@ -522,7 +524,10 @@ class VariableDeclaration : public Declaration {
     VariableDeclaration(Identifier* varType, Identifier* var, Expression* expr) : varType(varType), var(var), expr(expr) {}
     // 构造函数4：如int a[100][10];
     VariableDeclaration(Identifier* varType, Identifier* var, std::vector<Expression*>* arraySizes) : varType(varType), var(var), arraySizes(arraySizes) {}
-
+    // 构造函数5:如func f<int(int, float)> = []() {}
+    VariableDeclaration(Identifier* varType, Identifier* var, Identifier* funcReturnType, std::vector<Identifier*>* funcParaList, Expression* expr) : varType(varType), var(var), expr(expr), funcReturnType(funcReturnType), funcParaList(funcParaList) {}
+    // 构造函数6:如func f<char()> ——仅限于函数参数声明
+    VariableDeclaration(Identifier* varType, Identifier* var, Identifier* funcReturnType, std::vector<Identifier*>* funcParaList) : varType(varType), var(var), funcReturnType(funcReturnType), funcParaList(funcParaList) {}
     ~VariableDeclaration() {
         delete varType;
         delete var;
@@ -556,14 +561,28 @@ class VariableDeclaration : public Declaration {
         return this->arraySizes;
     }
 
+    Identifier* getFuncReturnType() const {
+        return this->funcReturnType;
+    }
+
+    std::vector<Identifier*>* getFuncParaList() const {
+        return this->funcParaList;
+    }
+
     json genJSON() const override {
         json root;
         root["name"] = "VariableDeclaration";
         varType != nullptr ? root["children"].push_back(varType->genJSON()) : (void)0;
         var != nullptr ? root["children"].push_back(var->genJSON()) : (void)0;
         expr != nullptr ? root["children"].push_back(expr->genJSON()) : (void)0;
+        funcReturnType != nullptr ? root["children"].push_back(funcReturnType->genJSON()) : (void)0;
         if (arraySizes != nullptr) {
             for (auto it = arraySizes->begin(); it != arraySizes->end(); ++it) {
+                root["children"].push_back((*it)->genJSON());
+            }
+        }
+        if (funcParaList != nullptr) {
+            for (auto it = funcParaList->begin(); it != funcParaList->end(); ++it) {
                 root["children"].push_back((*it)->genJSON());
             }
         }
@@ -658,6 +677,9 @@ class FunctionDeclaration : public Declaration {
     ~FunctionDeclaration() {
         delete returnType;
         delete func;
+        for (auto it = paramList->begin(); it != paramList->end(); ++it) {
+            delete *it;
+        }
         delete paramList;
         delete funcBlock;
     }
@@ -986,32 +1008,32 @@ class IOStatement : public LogicStatement {
    private:
     Type type = IOSTATEMENT;
     bool isRead = false;
-    Expression* expr = nullptr;
-    Entity* entity = nullptr;
-    std::string printText = "";
+    std::string formatString = "";
+    std::vector<Expression*>* vectorExpression = nullptr;
 
    public:
-    IOStatement(Expression* expr) : isRead(false), expr(expr) {}
-    IOStatement(Entity* entity) : isRead(true), entity(entity) {}
-    IOStatement(std::string printText) : isRead(false), printText(printText) {}
+    IOStatement(std::string formatString, std::vector<Expression*>* vectorExpression, bool isRead) : formatString(formatString), vectorExpression(vectorExpression), isRead(isRead) {}
+    IOStatement(std::string formatString) : formatString(formatString), isRead(false) {}
     IOStatement() {}
     ~IOStatement() {
-        delete expr;
-        delete entity;
+        if (vectorExpression != nullptr) {
+            for (auto it = vectorExpression->begin(); it != vectorExpression->end(); ++it) {
+                delete *it;
+            }
+            delete vectorExpression;
+        }
     }
 
     Type getType() const override {
         return this->type;
     }
 
-    Expression* getExpr() const {
-        return expr;
+    std::vector<Expression*>* getVectorExpression() const {
+        return vectorExpression;
     }
-    Entity* getEntity() const {
-        return entity;
-    }
+
     std::string getPrintText() const {
-        return printText;
+        return formatString;
     }
     bool getIsRead() const {
         return isRead;
@@ -1019,9 +1041,12 @@ class IOStatement : public LogicStatement {
 
     json genJSON() const override {
         json root;
-        root["name"] = printText != "" ? "IOStatement: " + printText : "IOStatement";
-        expr != nullptr ? root["children"].push_back(expr->genJSON()) : (void)0;
-        entity != nullptr ? root["children"].push_back(entity->genJSON()) : (void)0;
+        root["name"] = formatString != "" ? "IOStatement: " + formatString : "IOStatement";
+        if (vectorExpression != nullptr) {
+            for (auto it = vectorExpression->begin(); it != vectorExpression->end(); ++it) {
+                root["children"].push_back((*it)->genJSON());
+            }
+        }
         return root;
     }
 };

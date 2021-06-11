@@ -40,7 +40,7 @@ class CodeGen {
 //    std::unordered_map<const Declaration*, llvm::Function *> llvmFunctionTable;
 
     llvm::Value *visit(const Statement *);
-    llvm::BasicBlock *visit(const Block *);
+    llvm::BasicBlock *visit(const Block *, bool shouldCreateNewBlock = false);
     llvm::Value *visit(const Expression *, bool deref = false);
     llvm::Value *visit(const Identifier *, bool deref = false);
     llvm::Value *visit(const ArithmeticExpression *);
@@ -75,15 +75,17 @@ class CodeGen {
     void genFunctionContext(const std::string &name, llvm::Function *function);
     void endFunctionOrBlock();
 
-    llvm::Type *getType(Type, std::vector<llvm::ConstantInt *>* arraySizeList = nullptr);
+    llvm::Type *getType(Type, std::vector<llvm::ConstantInt *>* arraySizeList = nullptr, llvm::FunctionType* lambdaType = nullptr);
     std::string getFmtStr(llvm::Type *);
     llvm::Value* CastToBoolean(llvm::LLVMContext& context, llvm::Value* condValue);
     llvm::Constant *genConstant(const Identifier *);
     llvm::Value *deRef(llvm::Value *ptr);
+    llvm::Constant *getInitValue(llvm::Type *);
 public:
     CodeGen();
 
     void genCode(const Block *root, const std::string& inputFileName, const std::string& outputFileName);
+    void genBinary(const Block *root, const std::string& inputFileName, const std::string& outputFileName);
 
     llvm::Value *visit(const LambdaExpression *lambdaExpression);
 };

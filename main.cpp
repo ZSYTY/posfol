@@ -14,7 +14,7 @@ enum class OutputType {
 enum class ParseArgException {
     HELP, ERROR, ACCEPT
 };
-std::string input_name = "../testCode/sample.pfl", output_name = "";
+std::string input_name = "../testCode/test_lambda.pfl", output_name = "";
 bool debug = false, keep = false, b_type = false;
 
 ParseArgException get_args(int argc, char **argv) {
@@ -116,8 +116,8 @@ int main(int argc, char **argv) {
     checkProgram(programBlock);
 
     CodeGen codeGen;
-    codeGen.genCode(programBlock, input_name, output_name.empty() ? "a.ll" : output_name);
-
+//    codeGen.genCode(programBlock, input_name, output_name.empty() ? "a.ll" : output_name);
+    codeGen.genBinary(programBlock, input_name, output_name.empty() ? "a.out" : output_name);
 
     std::cout << "Hello posfol!" << std::endl;
     return 0;

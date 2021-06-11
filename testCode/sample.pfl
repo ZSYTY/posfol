@@ -1,4 +1,4 @@
-
+int x;
 int y = -1; // default value: 0
 char s0;
 char s1 = 'a'; // default value: '\0'
@@ -8,7 +8,9 @@ float u = (float)y; // default value: 0.0
  // strongly typed, must use (TYPE) to convert the type
 bool b = false;
 bool c = true; // default to be false
-func f = [x, b](int arg1, bool arg2)->void {return;}; // func variable must be constant
+//func f<void(int, bool)> = [x, b](int arg1, bool arg2)->void {return;}; // func variable must be constant
+
+// int globalIntArray[200];
 
 class A {
     public int a_x;
@@ -58,21 +60,22 @@ class B implements BB { // only one interface can be implemented, and no extendi
 void printValue(int x) {
     // use llvm to call printf (use the type of variable to infer the format string, e.g. "%d", "%s", and "%f")
     print("print from printValue\n");
-    print(x);
+    print("%d", x);
     print("\n");
+    return;
 }
 
-//void funcfunc(func f) {
+//void funcfunc(func f<char()>) {
 //    f();
 //}
 
-int globalIntArray[200];
 
 int main() {
+//    print(10);
 
     int intArray[100]; // every element initialized with default value 0
 
-    globalIntArray[2] = 10;
+//    globalIntArray[2] = 10;
 
     intArray[3] = 20;
 
@@ -83,25 +86,20 @@ int main() {
 
     // use llvm to call scanf
     int input_i;
-    read(input_i);
+    //read("%d", input_i);
     char input_s;
-    read(input_s);
+    read("%d%d", input_s, input_i);
     float input_f;
-    read(input_f);
+    read("%f", input_f);
 
     int ii = 0;
     printValue(ii);
-//    func print_input_f = [ii]()->char {
-//        printValue(ii);
-//        return 'Q';
-//    };
-
-//    print_input_f();
-
-    func sample_f = [input_s, print_input_f]()->char {
-//        funcfunc(print_input_f);
-        return input_s;
+    func print_input_f<char()> = [ii]()->char {
+        printValue(ii);
+        return 'Q';
     };
+
+    print_input_f();
 
     A a = new A();
 
@@ -117,10 +115,14 @@ int main() {
     int i;
     for (i = 1; i < 10; i = i + 1) {
         if (ii == 1) {
-            print(intArray[10]);
+            print("%d", intArray[10]);
         }
     }
 
+
+    char str[20];
+    read("%s", str);
+    print("%s\n", str);
 
     return 0;
 }

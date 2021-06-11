@@ -27,24 +27,28 @@ void CodeGen::init(const std::string& inputFileName) {
 }
 
 void CodeGen::dump(const std::string& outputFileName) {
-    std::string output;
-    llvm::raw_string_ostream out(output);
     this->module.print(llvm::outs(), nullptr);
-
-    std::cout << output << std::endl;
-    std::ofstream os(outputFileName);
-    os << output << std::endl; // TODO: cannot output to file
-//    module.dump();
+    std::error_code EC;
+    llvm::raw_fd_ostream os(outputFileName, EC);
+    this->module.print(os, nullptr);
 }
 
 void CodeGen::genCode(const Block *root, const std::string& inputFileName, const std::string& outputFileName) {
 //    init(inputFileName);
     rootBlock = root;
+    new llvm::GlobalVariable(module, llvm::Type::getInt1Ty(llvmContext), false,
+                             llvm::GlobalValue::CommonLinkage, getInitValue(llvm::Type::getInt1Ty(llvmContext)), "_#_bool_sc");
     visit(root);
     if (! hasVisitedMainFunction) {
         genMainFunctionContext();
     }
     dump(outputFileName);
+}
+
+void CodeGen::genBinary(const Block *root, const std::string &inputFileName, const std::string &outputFileName) {
+    genCode(root, inputFileName, "a.ll");
+    system("llc a.ll");
+    system(("gcc -o " + outputFileName + " -lm a.ll").c_str());
 }
 
 CodeGen::CodeGen(): module("posfol", llvmContext), irBuilder(llvmContext) {
@@ -158,7 +162,7 @@ llvm::Value *CodeGen::visit(const Statement *stmt) {
     }
 }
 
-llvm::BasicBlock *CodeGen::visit(const Block *block) {
+llvm::BasicBlock *CodeGen::visit(const Block *block, bool shouldCreateNewBlock) {
     if (block == nullptr) {
         return nullptr;
     }
@@ -166,7 +170,7 @@ llvm::BasicBlock *CodeGen::visit(const Block *block) {
     if (block != rootBlock) {
         symbolTable.pushAR();
     }
-    if (! symbolTable.isGlobal()) {
+    if (! symbolTable.isGlobal() and shouldCreateNewBlock) {
         llvm::Function *function = irBuilder.GetInsertBlock()->getParent();
         BB = llvm::BasicBlock::Create(llvmContext, "", function);
         irBuilder.SetInsertPoint(BB);
@@ -194,7 +198,6 @@ llvm::Value *CodeGen::visit(const Identifier *identifier, bool deref) {
             return value;
         }
     } else {
-        std::cout << "constant" << std::endl;
         return genConstant(identifier);
     }
 }
@@ -251,7 +254,7 @@ llvm::Value *CodeGen::visit(const BinaryOperator *binaryOperator) {
 llvm::Value *CodeGen::visit(const UnaryOperator *unaryOperator) {
     llvm::Value *hs = visit(unaryOperator->getHs());
     bool isFP = hs->getType()->isFloatTy();
-    switch (unaryOperator->getType()) {
+    switch (unaryOperator->getOp()) {
         case 0: // -
             return isFP ? irBuilder.CreateFNeg(hs, "negResult") : irBuilder.CreateNeg(hs, "negResult");
         case 1: // !
@@ -285,14 +288,22 @@ llvm::Value *CodeGen::visit(const Entity *entity, bool deref) {
 //            return this->irBuilder.CreateLoad(ptr, "deref");
 //        };
         std::vector<llvm::Value *> paramsVal;
-//        auto pregs = lambdaOuterArgsTable[reinterpret_cast<llvm::Function*>(fn)];
-//        for (const auto &preg : *pregs) {
-//            paramsVal.emplace_back(preg);
-//        }
-        for (const auto &arg : *entity->getVectorExpression()) {
-            paramsVal.emplace_back(deRef(visit(arg)));
+        if (lambdaOuterArgsTable.find(reinterpret_cast<llvm::Function*>(fn)) != lambdaOuterArgsTable.end()) {
+            auto pregs = lambdaOuterArgsTable[reinterpret_cast<llvm::Function*>(fn)];
+            for (const auto &preg : *pregs) {
+                paramsVal.emplace_back(deRef(preg));
+            }
         }
-        return irBuilder.CreateCall(reinterpret_cast<llvm::Function *>(fn), paramsVal, "call_fn");
+        for (const auto &arg : *entity->getVectorExpression()) {
+            auto expr = visit(arg);
+            paramsVal.emplace_back(deRef(expr));
+        }
+        auto* func = reinterpret_cast<llvm::Function *>(fn);
+        if (func->getReturnType()->isVoidTy()) {
+            return irBuilder.CreateCall(func, paramsVal);
+        } else {
+            return irBuilder.CreateCall(func, paramsVal, "call_fn");
+        }
     } else if (entity->getIsObjectCall()) {
         // TODO:
     }
@@ -320,11 +331,26 @@ llvm::Value *CodeGen::visit(const VariableDeclaration * variableDeclaration) {
 
     auto type = getType(varType, arraySizes ? sizeList : nullptr);
 
-    if (! type->isVoidTy()) {
+    if (varType == FUNC_DEFINE_TYPE) {
+        auto name = variableDeclaration->getVar()->getValue();
+        value = expressionResult;
+        symbolTable.push(name, variableDeclaration);
+        llvmSymbolTable[variableDeclaration] = value;
+    } else if (! type->isVoidTy()) {
         auto name = variableDeclaration->getVar()->getValue();
         if (symbolTable.isGlobal()) {
+            llvm::Constant *initValue = nullptr;
+            if (expressionResult) {
+                if (expressionResult->getType()->isPointerTy()) {
+                    initValue = static_cast<llvm::Constant *>(deRef(expressionResult));
+                } else {
+                    initValue = static_cast<llvm::Constant *>(expressionResult);
+                }
+            } else {
+                initValue = getInitValue(type);
+            }
             value = new llvm::GlobalVariable(module, type, false,
-                                     llvm::GlobalValue::CommonLinkage, nullptr, name);
+                                     llvm::GlobalValue::CommonLinkage, initValue, name);
         } else {
             value = irBuilder.CreateAlloca(type, arraySize, name);
             if (expressionResult) {
@@ -342,22 +368,35 @@ llvm::Value *CodeGen::visit(const VariableDeclaration * variableDeclaration) {
 
 llvm::Value *CodeGen::visit(const LambdaExpression *lambdaExpression) {
     std::vector<llvm::Type *> args;
-    auto* outerArgs = new std::vector<llvm::Value *>();
+    auto outerArgs = new std::vector<llvm::Value *>();
+    auto* outerArgsDecl = new std::vector<VariableDeclaration*>();
     for (auto item : *lambdaExpression->getOuterVars()) {
-        outerArgs->push_back(visit(item));
-        args.push_back(getType(symbolTable.findSymbol(item->getValue())->getType()));
+        auto outerArg = visit(item);
+        outerArgs->push_back(outerArg);
+        VariableDeclaration* outerArgDecl = (VariableDeclaration *) symbolTable.findSymbol(item->getValue());
+        outerArgsDecl->push_back(reinterpret_cast<VariableDeclaration *const>(outerArgDecl));
+        args.push_back(getType(outerArgDecl->getVarType()->getType()));
     }
     for (auto item : *lambdaExpression->getParamList()) {
-        args.push_back(getType(item->getType()));
+        args.push_back(getType(item->getVarType()->getType()));
     }
 
     llvm::Function *function = genCFunction("lambda", getType(lambdaExpression->getReturnType()->getType()), args, false);
     genFunctionContext("lambda", function);
 
-    lambdaOuterArgsTable[function] = outerArgs;
+    int idx = 0;
+    for (auto &argItem : function->args()) {
 
+        auto varDeclaration = idx < outerArgsDecl->size()
+                ? outerArgsDecl->at(idx++)
+                : lambdaExpression->getParamList()->at(idx++ - outerArgsDecl->size());
+        argItem.setName(varDeclaration->getVar()->getValue());
+        irBuilder.CreateStore(&argItem, visit(varDeclaration));
+    }
+    lambdaOuterArgsTable[function] = outerArgs;
     visit(lambdaExpression->getFuncBlock());
     endFunctionOrBlock();
+
     return function;
 }
 
@@ -400,10 +439,10 @@ llvm::Value *CodeGen::visit(const IfStatement *ifStatement) {
     llvm::Function* theFunction = irBuilder.GetInsertBlock()->getParent();
     llvm::Value* condValue = visit(ifStatement->getCondition());
     llvm::BasicBlock* beforeBlock = irBuilder.GetInsertBlock();
-    llvm::BasicBlock* trueBlock = visit(ifStatement->getTrueBlock());
-    llvm::BasicBlock* falseBlock = visit(ifStatement->getFalseBlock());
+    llvm::BasicBlock* trueBlock = visit(ifStatement->getTrueBlock(), true);
+    llvm::BasicBlock* falseBlock = visit(ifStatement->getFalseBlock(), true);
     llvm::BasicBlock* afterBlock = llvm::BasicBlock::Create(llvmContext, "after", theFunction);
-    if(falseBlock) {
+    if (falseBlock) {
         irBuilder.SetInsertPoint(beforeBlock);
         irBuilder.CreateCondBr(CastToBoolean(llvmContext, condValue), trueBlock, falseBlock);
         irBuilder.SetInsertPoint(trueBlock);
@@ -415,6 +454,8 @@ llvm::Value *CodeGen::visit(const IfStatement *ifStatement) {
     } else {
         irBuilder.SetInsertPoint(beforeBlock);
         irBuilder.CreateCondBr(CastToBoolean(llvmContext, condValue), trueBlock, afterBlock);
+        irBuilder.SetInsertPoint(trueBlock);
+        irBuilder.CreateBr(afterBlock);
         irBuilder.SetInsertPoint(afterBlock);
     }
 }
@@ -487,8 +528,12 @@ llvm::Value *CodeGen::visit(const WhileStatement *whileStatement) {
 }
 
 llvm::Value *CodeGen::visit(const ReturnStatement *returnStatement) {
-    llvm::Value *returnValue = visit(returnStatement->getReturnExpr());
-    return irBuilder.CreateRet(returnValue);
+    if (returnStatement->getReturnExpr()) {
+        llvm::Value *returnValue = visit(returnStatement->getReturnExpr());
+        return irBuilder.CreateRet(returnValue);
+    } else {
+        return irBuilder.CreateRetVoid();
+    }
 }
 
 llvm::Value *CodeGen::visit(const IOStatement *ioStatement) {
@@ -497,32 +542,30 @@ llvm::Value *CodeGen::visit(const IOStatement *ioStatement) {
     static llvm::Function *scanfFunc = genCFunction("scanf",
                                                     llvm::Type::getInt32Ty(llvmContext), { llvm::Type::getInt8PtrTy(llvmContext) }, true);
     std::vector<llvm::Value *> args;
-    std::string fmtStr = "";
-    llvm::Value *value = nullptr;
+    args.push_back(irBuilder.CreateGlobalStringPtr(ioStatement->getPrintText(), "formatString", 0, &module));
 
-    if (ioStatement->getExpr()) {
-        value = visit(ioStatement->getExpr());
-        fmtStr = getFmtStr(value->getType());
-    } else if (ioStatement->getEntity()) {
-        value = visit(ioStatement->getEntity());
-        fmtStr = getFmtStr(value->getType());
+    if (ioStatement->getVectorExpression()) {
+        for (auto item : *ioStatement->getVectorExpression()) {
+            llvm::Value *arg = visit(item);
+            auto zero = llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext), 0, true);
+            if (arg->getType()->isPointerTy()) {
+                auto value = deRef(arg);
+                if (value->getType()->isArrayTy()) {
+                    arg = irBuilder.CreateGEP(arg, {zero, zero});
+                } else {
+                    if (!ioStatement->getIsRead()) {
+                        arg = value;
+                    }
+                }
+            }
+            args.push_back(arg);
+        }
     }
 
     if (ioStatement->getIsRead()) {
-        args.push_back(irBuilder.CreateGlobalStringPtr(fmtStr, "fmtStr"));
-        args.push_back(value);
-        irBuilder.CreateCall(scanfFunc, args, "readSysFunc");
+        irBuilder.CreateCall(scanfFunc, args);
     } else {
-        if (ioStatement->getExpr()) {
-            args.push_back(irBuilder.CreateGlobalStringPtr(fmtStr, "fmtStr"));
-            if (value->getType()->isPointerTy()) {
-                value = deRef(value);
-            }
-            args.push_back(value);
-        } else {
-            args.push_back(irBuilder.CreateGlobalStringPtr(ioStatement->getPrintText(), "printStr"));
-        }
-        irBuilder.CreateCall(printfFunc, args, "printSysFunc");
+        irBuilder.CreateCall(printfFunc, args);
     }
 }
 
@@ -544,6 +587,8 @@ llvm::Value *CodeGen::visit(const Expression * expression, bool deref) {
             return visit(dynamic_cast<const Entity *>(expression), deref);
         case INT_VALUE: case LONG_VALUE: case FLOAT_VALUE: case DOUBLE_VALUE: case CHAR_VALUE: case BOOLEAN_VALUE:
             return visit(dynamic_cast<const Identifier *>(expression), true);
+        case LAMBDADECLARATION:
+            return visit(dynamic_cast<const LambdaExpression *>(expression));
         default:
             return nullptr;
     }

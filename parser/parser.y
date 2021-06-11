@@ -41,9 +41,9 @@ void yyerror(const char* msg) {
 %type <block> program global_stmts global_stmts_nonempty class_stmts class_stmts_nonempty interface_stmts interface_stmts_nonempty stmts stmts_nonempty else_clause
 %type <statement> global_stmt class_stmt interface_stmt stmt
 %type <variable_declaration> id_and_initial varible_decl
-%type <identifier> varible_decl_type function_decl_type literal
+%type <identifier> variable_decl_type function_decl_type literal
 %type <var_decl_list> id_and_initial_list args_list args_list_nonempty
-%type <id_list> id_list id_list_nonempty
+%type <id_list> id_list id_list_nonempty variable_decl_type_list variable_decl_type_list_nonempty
 %type <class_declaration> class_decl 
 %type <function_declaration> construction_decl function_decl
 %type <interface_declaration> interface_decl
@@ -91,13 +91,30 @@ global_stmt:
 ;
 
 varible_decl:
-    varible_decl_type id_and_initial SEMI {
-        $$ = $2;
-        $$->setVarType($1);
+    variable_decl_type ID SEMI {
+        $$ = new VariableDeclaration($1, new Identifier(Type::NAME, *($2)));
+        //delete $1;
+    }
+|   variable_decl_type ID ASSIGN CHAR SEMI {
+        $$ = new VariableDeclaration($1, new Identifier(Type::NAME, *($2)), new Identifier(Type::VALUE, *($4)));
+        //delete $1;
+        //delete $3;
+    }
+|   variable_decl_type ID ASSIGN expr SEMI {
+        $$ = new VariableDeclaration($1, new Identifier(Type::NAME, *($2)), $4);
+        //delete $1;
+    }
+|   variable_decl_type ID LT variable_decl_type LP variable_decl_type_list RP GT ASSIGN LB id_list RB LP args_list RP ARROR variable_decl_type BEG stmts END SEMI {
+        $$ = new VariableDeclaration($1, new Identifier(Type::NAME, *($2)), $4, $6, new LambdaExpression($11, $14, $17, $19));
+        //delete $1;
+    }
+|   variable_decl_type array_entity SEMI {
+        $$ = new VariableDeclaration($1, (Identifier*)((*$2)[0]), new std::vector<Expression*>($2->begin() + 1, $2->end()));
     }
 ;
+;
 
-varible_decl_type:
+variable_decl_type:
     BOOL_TYPE {$$ = new Identifier(Type::BOOLEAN_DEFINE_TYPE);}
 |   CHAR_TYPE  {$$ = new Identifier(Type::CHAR_DEFINE_TYPE);}
 |   INT_TYPE  {$$ = new Identifier(Type::INT_DEFINE_TYPE);}
@@ -105,6 +122,23 @@ varible_decl_type:
 |   FUNC_TYPE  {$$ = new Identifier(Type::FUNC_DEFINE_TYPE); }
 |   VOID_TYPE {$$ = new Identifier(Type::VOID_DEFINE_TYPE); }
 |   ID {$$ = new Identifier(Type::CLASS_DEFINE_TYPE, *($1));}
+;
+
+variable_decl_type_list:
+    /* empty */ {
+        $$ = new std::vector<Identifier*>();
+    }
+|   variable_decl_type_list_nonempty
+;
+
+variable_decl_type_list_nonempty:
+    variable_decl_type_list_nonempty COMMA variable_decl_type {
+        $1->push_back($3);
+    }
+|   variable_decl_type {
+        $$ = new std::vector<Identifier*>();
+        $$->push_back($1);
+    }
 ;
 
 id_and_initial_list:
@@ -131,7 +165,7 @@ id_and_initial:
         $$ = new VariableDeclaration(nullptr, new Identifier(Type::NAME, *($1)), $3);
         //delete $1;
     }
-|   ID ASSIGN LB id_list RB LP args_list RP ARROR varible_decl_type BEG stmts END {
+|   ID ASSIGN LB id_list RB LP args_list RP ARROR variable_decl_type BEG stmts END {
         $$ = new VariableDeclaration(nullptr, new Identifier(Type::NAME, *($1)), new LambdaExpression($4, $7, $10, $12));
         //delete $1;
     }
@@ -168,14 +202,20 @@ args_list:
 ;
 
 args_list_nonempty:
-    args_list_nonempty COMMA varible_decl_type ID {
+    args_list_nonempty COMMA variable_decl_type ID {
         $1->push_back(new VariableDeclaration($3, new Identifier(Type::NAME, *($4))));
         //delete $4;
     }
-|   varible_decl_type ID {
+|   variable_decl_type ID {
         puts("args_list_nonempty first one");
         $$ = new std::vector<VariableDeclaration*>();
         $$->push_back(new VariableDeclaration($1, new Identifier(Type::NAME, *($2))));
+        //delete $2;
+    }
+|   variable_decl_type ID LT variable_decl_type LP variable_decl_type_list RP GT {
+        puts("args_list_nonempty first one");
+        $$ = new std::vector<VariableDeclaration*>();
+        $$->push_back(new VariableDeclaration($1, new Identifier(Type::NAME, *($2)), $4, $6));
         //delete $2;
     }
 ;
@@ -253,13 +293,13 @@ interface_stmts_nonempty:
 ;
 
 interface_stmt:
-    varible_decl_type ID LP args_list RP SEMI {
+    variable_decl_type ID LP args_list RP SEMI {
         $$ = new FunctionDeclaration($1, new Identifier(Type::NAME, *($2)), $4);
     }
 ;
 
 function_decl:
-    varible_decl_type ID LP args_list RP BEG stmts END {
+    variable_decl_type ID LP args_list RP BEG stmts END {
         $$ = new FunctionDeclaration($1, new Identifier(Type::NAME, *($2)), $4, $7);
         //delete $2;
         puts("finish function declaration");
@@ -345,7 +385,7 @@ term:
 
 factor:
     factor_nontype_convert
-|   LP varible_decl_type RP factor_nontype_convert {$$ = new TypeConvertOperator($2, $4);}
+|   LP variable_decl_type RP factor_nontype_convert {$$ = new TypeConvertOperator($2, $4);}
 ;
 
 factor_nontype_convert:
@@ -488,11 +528,11 @@ return_stmt:
 ;
 
 io_stmt:
-    READ LP entity RP SEMI {
-        $$ = new IOStatement($3);
+    READ LP STRING COMMA expr_list_nonempty RP SEMI {
+        $$ = new IOStatement(*($3), $5, true);
     }
-|   PRINT LP expr RP SEMI {
-        $$ = new IOStatement($3);
+|   PRINT LP STRING COMMA expr_list_nonempty RP SEMI {
+        $$ = new IOStatement(*($3), $5, false);
     }
 |   PRINT LP STRING RP SEMI {
         $$ = new IOStatement(*($3));
