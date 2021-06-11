@@ -1,0 +1,40 @@
+int a[10005];
+int N;
+
+void quick_sort(int left, int right) {
+    int i = left + 1;
+    int j = right;
+    int pivot = a[left];
+    while(i <= j) {
+        while(i <= j && a[i] <= pivot) {
+            i++;
+        }
+        while(i <= j && a[j] >= pivot) {
+            j--;
+        }
+        if(i <= j) {
+            int tmp = a[i];
+            a[i] = a[j];
+            a[j] = tmp;
+        }
+    }
+    int tmp = a[left];
+    a[left] = a[j];
+    a[j] = tmp;
+    quick_sort(left, j - 1);
+    quick_sort(j + 1, right);
+}
+
+int main() {
+    read(N);
+    int i;
+    for(i = 0; i < N; i++) {
+        read(a[i]);
+    }
+    quick_sort(0, N - 1);
+    for(i = 0; i < N; i++) {
+        print(a[i]);
+        print("\n");
+    }
+    return 0;
+}
