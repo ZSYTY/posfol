@@ -31,16 +31,18 @@ void yyerror(const char* msg) {
     WhileStatement* while_statement;
     ForStatement* for_statement;
     ReturnStatement* return_statement;
+    ContinueStatement* continue_statement;
+    BreakStatement* break_statement;
     IOStatement* io_stmt;
     std::vector<Identifier*>* id_list;
     std::vector<VariableDeclaration*>* var_decl_list;
     std::vector<Expression*>* expr_list;
 }
-%token <val> LP RP LB RB BEG END DOT COMMA COLON MUL DIV MOD UNEQUAL NOT PLUS MINUS GE GT LE LT EQUAL AND OR ASSIGN ADD_ASSIGN SUB_ASSIGN MULTIPLE_ASSIGN DIV_ASSIGN MOD_ASSIGN SEMI ARROR FALSE TRUE PRINT BOOL_TYPE CHAR_TYPE INT_TYPE FLOAT_TYPE FUNC_TYPE VOID_TYPE READ FLOAT INT CHAR STRING ELSE FOR WHILE IF ID PUBLIC PRIVATE IMPLEMENTS NEW CLASS INTERFACE RETURN
+%token <val> LP RP LB RB BEG END DOT COMMA COLON MUL DIV MOD UNEQUAL NOT PLUS MINUS GE GT LE LT EQUAL AND OR ASSIGN ADD_ASSIGN SUB_ASSIGN MULTIPLE_ASSIGN DIV_ASSIGN MOD_ASSIGN SEMI ARROR FALSE TRUE PRINT BOOL_TYPE CHAR_TYPE INT_TYPE FLOAT_TYPE FUNC_TYPE VOID_TYPE READ FLOAT INT CHAR STRING ELSE FOR WHILE IF ID PUBLIC PRIVATE IMPLEMENTS NEW CLASS INTERFACE RETURN CONTINUE BREAK
 %type <val> access_label
 %type <block> program global_stmts global_stmts_nonempty class_stmts class_stmts_nonempty interface_stmts interface_stmts_nonempty stmts stmts_nonempty else_clause
 %type <statement> global_stmt class_stmt interface_stmt stmt
-%type <variable_declaration> id_and_initial varible_decl
+%type <variable_declaration> id_and_initial varible_decl args_list_arg
 %type <identifier> variable_decl_type function_decl_type literal
 %type <var_decl_list> id_and_initial_list args_list args_list_nonempty
 %type <id_list> id_list id_list_nonempty variable_decl_type_list variable_decl_type_list_nonempty
@@ -55,6 +57,8 @@ void yyerror(const char* msg) {
 %type <while_statement> while_stmt
 %type <for_statement> for_stmt
 %type <return_statement> return_stmt
+%type <continue_statement> continue_stmt
+%type <break_statement> break_stmt
 %type <io_stmt> io_stmt
 %left PLUS MINUS
 %left MUL DIV MOD
@@ -111,7 +115,6 @@ varible_decl:
 |   variable_decl_type array_entity SEMI {
         $$ = new VariableDeclaration($1, (Identifier*)((*$2)[0]), new std::vector<Expression*>($2->begin() + 1, $2->end()));
     }
-;
 ;
 
 variable_decl_type:
@@ -198,25 +201,33 @@ args_list:
         puts("empty args_list");
         $$ = new std::vector<VariableDeclaration*>();
     }
-|   args_list_nonempty
+|   args_list_nonempty {puts("args_list_nonempty");}
 ;
 
 args_list_nonempty:
-    args_list_nonempty COMMA variable_decl_type ID {
-        $1->push_back(new VariableDeclaration($3, new Identifier(Type::NAME, *($4))));
+    args_list_nonempty COMMA args_list_arg {
+        $1->push_back($3);
         //delete $4;
     }
-|   variable_decl_type ID {
+|   args_list_arg {
         puts("args_list_nonempty first one");
         $$ = new std::vector<VariableDeclaration*>();
-        $$->push_back(new VariableDeclaration($1, new Identifier(Type::NAME, *($2))));
+        $$->push_back($1);
         //delete $2;
     }
+;
+
+args_list_arg:
+    variable_decl_type ID {
+        $$ = new VariableDeclaration($1, new Identifier(Type::NAME, *($2)));
+        //delete $4;
+    }
 |   variable_decl_type ID LT variable_decl_type LP variable_decl_type_list RP GT {
-        puts("args_list_nonempty first one");
-        $$ = new std::vector<VariableDeclaration*>();
-        $$->push_back(new VariableDeclaration($1, new Identifier(Type::NAME, *($2)), $4, $6));
+        $$ = new VariableDeclaration($1, new Identifier(Type::NAME, *($2)), $4, $6);
         //delete $2;
+    }
+|   variable_decl_type array_entity {
+        $$ = new VariableDeclaration($1, (Identifier*)((*$2)[0]), new std::vector<Expression*>($2->begin() + 1, $2->end()));
     }
 ;
 
@@ -334,7 +345,7 @@ stmts_nonempty:
 ;
 
 stmt:
-    varible_decl
+    varible_decl {puts("local variable declaration");}
 |   expr SEMI
 |   logical_stmt
 |   io_stmt
@@ -454,6 +465,7 @@ literal:
     }
 |   CHAR {
         $$ = new Identifier(Type::CHAR_VALUE, *($1)); 
+        puts("yacc char literal");
         //delete $1;
     }
 |   TRUE {
@@ -489,6 +501,8 @@ logical_stmt:
 |   while_stmt
 |   for_stmt
 |   return_stmt
+|   continue_stmt
+|   break_stmt
 ;
 
 if_stmt:
@@ -521,21 +535,38 @@ for_stmt:
 return_stmt:
     RETURN expr SEMI {
         $$ = new ReturnStatement($2);
+        puts("return with value");
     }
 |   RETURN SEMI {
         $$ = new ReturnStatement();
     }
 ;
 
+continue_stmt:
+    CONTINUE SEMI {
+        $$ = new ContinueStatement();
+    }
+;
+
+break_stmt:
+    BREAK SEMI {
+        $$ = new BreakStatement();
+        puts("break");
+    }
+;
+
 io_stmt:
     READ LP STRING COMMA expr_list_nonempty RP SEMI {
         $$ = new IOStatement(*($3), $5, true);
+        puts("read");
     }
 |   PRINT LP STRING COMMA expr_list_nonempty RP SEMI {
         $$ = new IOStatement(*($3), $5, false);
+        puts("print");
     }
 |   PRINT LP STRING RP SEMI {
         $$ = new IOStatement(*($3));
+        puts("print string");
     }
 ;
 

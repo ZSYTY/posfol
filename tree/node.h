@@ -997,6 +997,55 @@ class ReturnStatement : public LogicStatement {
     }
 };
 
+
+/**
+ * @author guoziyang
+ *
+ * continue语句：continue;
+ */
+class ContinueStatement : public LogicStatement {
+private:
+    Type type = CONTINUESTATEMENT;
+
+public:
+    ContinueStatement() {}
+
+    Type getType() const override {
+        return this->type;
+    }
+
+
+    json genJSON() const override {
+        json root;
+        root["name"] = "ContinueStatement";
+        return root;
+    }
+};
+
+/**
+ * @author guoziyang
+ *
+ * break语句：break;
+ */
+class BreakStatement : public LogicStatement {
+private:
+    Type type = BREAKSTATEMENT;
+
+public:
+    BreakStatement() {}
+
+    Type getType() const override {
+        return this->type;
+    }
+
+
+    json genJSON() const override {
+        json root;
+        root["name"] = "BreakStatement";
+        return root;
+    }
+};
+
 /**
  * @author guoziyang
  *
