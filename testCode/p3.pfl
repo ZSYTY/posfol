@@ -41,7 +41,6 @@ bool judge(char* p_course) {
 int main() {
     int i = 0;
     char discard;
-    char pre_coursers[50];
     while (true) {
         read("%c", &course[i][0]);
         if (course[i][0] == '\n') {
@@ -52,8 +51,9 @@ int main() {
         read("%d", &credit[i]);
         total_credit = total_credit + credit[i];
         read("%c", &discard);
+        char pre_coursers[50];
         read("%[^|]", pre_coursers);
-        if (pre_coursers == '\0') {
+        if (pre_coursers[0] == '\0') {
             can_taken[i] = true;
         } else {
             can_taken[i] = false;
