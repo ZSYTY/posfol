@@ -26,6 +26,7 @@ bool equals(char str1[50], char str2[50]) {
     } else {
         return true;
     }
+    return false;
 }
 
 bool judge(char p_course[50]) {
@@ -53,7 +54,7 @@ int main() {
         total_credit = total_credit + credit[i];
         read("%c", discard);
         read("%[^|]", pre_coursers);
-        if (pre_coursers == '\0') {
+        if (pre_coursers[0] == '\0') {
             can_taken[i] = true;
         } else {
             can_taken[i] = false;
@@ -88,7 +89,7 @@ int main() {
             try_credit = try_credit + credit[i];
             if (grade[i] != 'F') {
                 get_credit = get_credit + credit[i];
-                total_grade = total_grade + credit[i] * ('E' - grade[i]);
+                total_grade = total_grade + credit[i] * (int)('E' - grade[i]);
             }
         }
         read("%c", discard);
@@ -129,7 +130,7 @@ int main() {
         }
     }
 
-    print("GPA: %.1f\n", 1.0 * total_grade / try_credit);
+    print("GPA: %.1f\n", 1.0 * (float)total_grade / (float)try_credit);
     print("Hours Attempted: %d\n", try_credit);
     print("Hours Completed: %d\n", get_credit);
     print("Credits Remaining: %d\n", rest_credit);

@@ -16,10 +16,10 @@ llvm::Value *CodeGen::deRef(llvm::Value *ptr) {
 
 llvm::Value* CodeGen::CastToBoolean(llvm::LLVMContext& context, llvm::Value* condValue){
     if(ISTYPE(condValue, llvm::Type::IntegerTyID)){
-        condValue = irBuilder.CreateIntCast(condValue, llvm::Type::getInt1Ty(context), true);
-        return irBuilder.CreateICmpNE(condValue, llvm::ConstantInt::get(llvm::Type::getInt1Ty(context), 0, true));
+        condValue = irBuilder.CreateIntCast(condValue, llvm::Type::getInt1Ty(context), true, "intCast");
+        return irBuilder.CreateICmpNE(condValue, llvm::ConstantInt::get(llvm::Type::getInt1Ty(context), 0, true), "intCmp");
     }else if(ISTYPE(condValue, llvm::Type::DoubleTyID)){
-        return irBuilder.CreateFCmpONE(condValue, llvm::ConstantFP::get(context, llvm::APFloat(0.0)));
+        return irBuilder.CreateFCmpONE(condValue, llvm::ConstantFP::get(context, llvm::APFloat(0.0)), "floatCmp");
     }else{
         return condValue;
     }
@@ -269,8 +269,16 @@ llvm::Value *CodeGen::visit(const UnaryOperator *unaryOperator) {
 }
 
 llvm::Value *CodeGen::visit(const TypeConvertOperator *typeConvertOperator) {
-    llvm::Value *value = visit(typeConvertOperator->getExpr());
+    llvm::Value *value = deRef(visit(typeConvertOperator->getExpr()));
     // TODO: casting
+    auto targetType = typeConvertOperator->getOp()->getType();
+    if (targetType == INT_DEFINE_TYPE) {
+        return irBuilder.CreateSExt(value, getType(targetType), "charToInt");
+    } else if (targetType == FLOAT_DEFINE_TYPE) {
+        return irBuilder.CreateSIToFP(value, getType(targetType), "intToFloat");
+    }
+    // TODO:
+    return value;
 }
 
 llvm::Value *CodeGen::visit(const ClassNewExpression *) {
@@ -285,7 +293,7 @@ llvm::Value *CodeGen::visit(const Entity *entity, bool deref) {
         // TODO:
         llvm::Value* array = visit(entity->getEntity());
         llvm::Value* indexExpr = visit(entity->getExpression(), true);
-        llvm::Value* result = irBuilder.CreateGEP(array, {llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext), 0, true), indexExpr});
+        llvm::Value* result = irBuilder.CreateGEP(array, {llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext), 0, true), indexExpr}, "arrayIndex");
         if (deref and result->getType()->isPointerTy()) {
             result = deRef(result);
         }
@@ -328,13 +336,9 @@ llvm::Value *CodeGen::visit(const VariableDeclaration * variableDeclaration) {
     llvm::Value *value = nullptr;
     auto arraySizes = variableDeclaration->getArraySizes();
     llvm::Value *arraySize = nullptr;
-    auto *sizeList = new std::vector<llvm::ConstantInt *>;
+    auto *sizeList = getSizeList(arraySizes);
+
     if (arraySizes) {
-
-        for (auto &item : *arraySizes) {
-            sizeList->push_back(static_cast<llvm::ConstantInt *>(visit(item)));
-        }
-
         arraySize = sizeList->front();
         for (int i = 1; i < sizeList->size(); i++) {
             arraySize = irBuilder.CreateMul(arraySize, (*sizeList)[i]);
@@ -375,6 +379,7 @@ llvm::Value *CodeGen::visit(const VariableDeclaration * variableDeclaration) {
         symbolTable.push(name, variableDeclaration);
         llvmSymbolTable[variableDeclaration] = value;
     }
+    delete sizeList;
     return value;
 }
 
@@ -424,7 +429,11 @@ llvm::Value *CodeGen::visit(const FunctionDeclaration *functionDeclaration) {
     } else {
         std::vector<llvm::Type *> args;
         for (auto item : *functionDeclaration->getParamList()) {
-            args.push_back(getType(item->getVarType()->getType()));
+            if (item->getArraySizes()) {
+                args.push_back(getType(item->getVarType()->getType(), getSizeList(item->getArraySizes())));
+            } else {
+                args.push_back(getType(item->getVarType()->getType()));
+            }
         }
         function = genCFunction(name, getType(functionDeclaration->getReturnType()->getType()), args, false);
         genFunctionContext(name, function);
@@ -453,7 +462,7 @@ llvm::Value *CodeGen::visit(const InterfaceDeclaration *) {
 
 llvm::Value *CodeGen::visit(const IfStatement *ifStatement) {
     llvm::Function* theFunction = irBuilder.GetInsertBlock()->getParent();
-    llvm::Value* condValue = visit(ifStatement->getCondition());
+    llvm::Value* condValue = deRef(visit(ifStatement->getCondition()));
     llvm::BasicBlock* beforeBlock = irBuilder.GetInsertBlock();
     llvm::BasicBlock* trueBlock = visit(ifStatement->getTrueBlock(), true, "trueBlock");
     llvm::BasicBlock* afterTrueBlock = irBuilder.GetInsertBlock();
@@ -547,7 +556,7 @@ llvm::Value *CodeGen::visit(const WhileStatement *whileStatement) {
 
 llvm::Value *CodeGen::visit(const ReturnStatement *returnStatement) {
     if (returnStatement->getReturnExpr()) {
-        llvm::Value *returnValue = visit(returnStatement->getReturnExpr());
+        llvm::Value *returnValue = visit(returnStatement->getReturnExpr(), true);
         return irBuilder.CreateRet(returnValue);
     } else {
         return irBuilder.CreateRetVoid();
@@ -569,7 +578,7 @@ llvm::Value *CodeGen::visit(const IOStatement *ioStatement) {
             if (arg->getType()->isPointerTy()) {
                 auto value = deRef(arg);
                 if (value->getType()->isArrayTy()) {
-                    arg = irBuilder.CreateGEP(arg, {zero, zero});
+                    arg = irBuilder.CreateGEP(arg, {zero, zero}, "arrayIndex");
                 } else {
                     if (!ioStatement->getIsRead()) {
                         arg = value;

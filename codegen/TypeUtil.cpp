@@ -103,3 +103,13 @@ llvm::Constant * CodeGen::getInitValue(llvm::Type *type) {
         return nullptr;
     }
 }
+
+std::vector<llvm::ConstantInt *> * CodeGen::getSizeList(const std::vector<Expression*>* arraySizes) {
+    auto *sizeList = new std::vector<llvm::ConstantInt *>;
+    if (arraySizes) {
+        for (auto &item : *arraySizes) {
+            sizeList->push_back(static_cast<llvm::ConstantInt *>(visit(item)));
+        }
+    }
+    return sizeList;
+}

@@ -81,6 +81,7 @@ class CodeGen {
     llvm::Constant *genConstant(const Identifier *);
     llvm::Value *deRef(llvm::Value *ptr);
     llvm::Constant *getInitValue(llvm::Type *);
+    std::vector<llvm::ConstantInt *> *getSizeList(const std::vector<Expression*>* arraySizes);
 public:
     CodeGen();
 
