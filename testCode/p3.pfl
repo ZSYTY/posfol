@@ -42,7 +42,12 @@ int main() {
     int i = 0;
     char discard;
     char pre_coursers[50];
-    while (read("%[^|]", course[i]) != EOF) {
+    while (true) {
+        read("%c", &course[i][0]);
+        if (course[i][0] == '\n') {
+            break;
+        }
+        read("%[^|]", &course[i][1])
         read("%c", &discard);
         read("%d", &credit[i]);
         total_credit = total_credit + credit[i];
