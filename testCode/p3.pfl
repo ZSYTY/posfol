@@ -30,7 +30,7 @@ bool equals(char* str1, char* str2) {
 
 bool judge(char* p_course) {
     int i;
-    for (i = 0; i < course_num; i++) {
+    for (i = 0; i < course_num; i = i + 1) {
         if (equals(course[i], p_course)) {
             return can_taken[i];
         }
@@ -45,7 +45,7 @@ int main() {
     while (read("%[^|]", course[i]) != EOF) {
         read("%c", &discard);
         read("%d", &credit[i]);
-        total_credit += credit[i];
+        total_credit = total_credit + credit[i];
         read("%c", &discard);
         read("%[^|]", pre_coursers);
         if (pre_coursers == '\0') {
@@ -57,16 +57,16 @@ int main() {
         int t = 0;
         int m = 0;
         int n = 0;
-        for (j = 0; pre_coursers[j] != '\0'; j++, n++) {
+        for (j = 0; pre_coursers[j] != '\0'; j = j + 1, n = n + 1) {
             if (pre_coursers[j] == ',') {
                 pre[i][t][m][n] = '\0';
-                m++;
+                m = m + 1;
                 n = 0;
                 continue;
             }
             if (pre_coursers[j] == ';') {
                 pre[i][t][m][n] = '\0';
-                t++;
+                t = t + 1;
                 m = 0;
                 n = 0;
                 continue;
@@ -77,10 +77,10 @@ int main() {
         read("%c", &discard);
         read("%[^\n]", &grade[i]);
         if (grade[i] != '\0') {
-            try_credit += credit[i];
+            try_credit = try_credit + credit[i];
             if (grade[i] != 'F') {
-                get_credit += credit[i];
-                total_grade += credit[i] * ('E' - grade[i]);
+                get_credit = get_credit + credit[i];
+                total_grade = total_grade + credit[i] * ('E' - grade[i]);
             }
         }
         read("%c", &discard);
@@ -91,16 +91,19 @@ int main() {
 
     while (true) {
         bool finish = true;
-        for (int i = 0; i < course_num; i++) {
+        int i;
+        for (i = 0; i < course_num; i = i + 1) {
             if (can_taken[i]) {
                 continue;
             }
             bool can_this = false;
-            for (int t = 0; t < T[i]; t++) {
+            int t;
+            for (t = 0; t < T[i]; t = t + 1) {
                 bool can_this_group = true;
                 int m = 0;
                 while (pre[i][t][m][0] != '\0') {
-                    can_this_group = can_this_group & judge(pre[i][t][m++]);
+                    can_this_group = can_this_group & judge(pre[i][t][m]);
+                    m = m + 1;
                 }
                 if (can_this_group == true) {
                     can_this = true;
@@ -127,7 +130,7 @@ int main() {
     if (rest_credit == 0) {
         print("  None - Congratulations!\n");
     } else {
-        for (int i = 0; i < course_num; i++) {
+        for (int i = 0; i < course_num; i = i + 1) {
             if (recommend[i]) {
                 print("  %s\n", course[i]);
             }
