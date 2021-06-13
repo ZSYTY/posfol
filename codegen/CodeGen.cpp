@@ -63,106 +63,70 @@ llvm::Value *CodeGen::visit(const Statement *stmt) {
     switch (stmt->getType()) {
         case BLOCK:
             return visit(dynamic_cast<const Block *>(stmt));
-            break;
         case IDENTIFIER:
             return visit(dynamic_cast<const Identifier *>(stmt));
-            break;
         case ARITHMETICEXPRESSION:
             return visit(dynamic_cast<const ArithmeticExpression *>(stmt));
-            break;
         case BINARYOPERATOR:
             return visit(dynamic_cast<const BinaryOperator *>(stmt));
-            break;
         case UNARYOPERATOR:
             return visit(dynamic_cast<const UnaryOperator *>(stmt));
-            break;
         case TYPECONVERTOPERATOR:
             return visit(dynamic_cast<const TypeConvertOperator *>(stmt));
-            break;
         case CLASSNEWEXPRESSION:
             return visit(dynamic_cast<const ClassNewExpression *>(stmt));
-            break;
         case ENTITYEXPRESSION:
             return visit(dynamic_cast<const Entity *>(stmt));
-            break;
         case VARIABLEDECLARATION:
             return visit(dynamic_cast<const VariableDeclaration *>(stmt));
-            break;
         case LAMBDADECLARATION:
             return visit(dynamic_cast<const LambdaExpression *>(stmt));
-            break;
         case FUNCTIONDECLARATION:
             return visit(dynamic_cast<const FunctionDeclaration *>(stmt));
-            break;
         case CLASSDECLARATION:
             return visit(dynamic_cast<const ClassDeclaration *>(stmt));
-            break;
         case INTERFACEDECLARATION:
             return visit(dynamic_cast<const InterfaceDeclaration *>(stmt));
-            break;
         case IFSTATEMENT:
             return visit(dynamic_cast<const IfStatement *>(stmt));
-            break;
         case FORSTATEMENT:
             return visit(dynamic_cast<const ForStatement *>(stmt));
-            break;
         case WHILESTATEMENT:
             return visit(dynamic_cast<const WhileStatement *>(stmt));
-            break;
         case RETURNSTATEMENT:
             return visit(dynamic_cast<const ReturnStatement *>(stmt));
-            break;
         case IOSTATEMENT:
             return visit(dynamic_cast<const IOStatement *>(stmt));
-            break;
-        case NODE:
-            break;
+        case BREAKSTATEMENT:
+            return visit(dynamic_cast<const BreakStatement *>(stmt));
+        case CONTINUESTATEMENT:
+            return visit(dynamic_cast<const ContinueStatement *>(stmt));
         case EXPRESSION:
             return visit(dynamic_cast<const Expression *>(stmt));
-            break;
-        case CLASSEXPRESSION:
-            break;
-        case CLASSVARIABLEEXPRESSION:
-            break;
-        case CLASSFUNCEXPRESSION:
-            break;
         case ASSIGNEXPRESSION:
             return visit(dynamic_cast<const AssignExpression *>(stmt));
-            break;
+        case NODE:
+        case CLASSEXPRESSION:
+        case CLASSVARIABLEEXPRESSION:
+        case CLASSFUNCEXPRESSION:
         case DECLARATION:
-            break;
         case STATEMENT:
-            break;
         case LOGICSTATEMENT:
-            break;
         case INT_DEFINE_TYPE:
-            break;
         case LONG_DEFINE_TYPE:
-            break;
         case FLOAT_DEFINE_TYPE:
-            break;
         case DOUBLE_DEFINE_TYPE:
-            break;
         case BOOLEAN_DEFINE_TYPE:
-            break;
         case CHAR_DEFINE_TYPE:
-            break;
         case FUNC_DEFINE_TYPE:
-            break;
         case VOID_DEFINE_TYPE:
-            break;
         case CLASS_DEFINE_TYPE:
-            break;
         case ARRAY:
-            break;
         case TYPE:
-            break;
         case NAME:
-            break;
         case VALUE:
-            break;
         case ERROR:
-            break;
+            return nullptr;
     }
 }
 
@@ -491,6 +455,10 @@ llvm::Value *CodeGen::visit(const ForStatement * forStatement) {
     llvm::Function* theFunction = irBuilder.GetInsertBlock()->getParent();
     llvm::BasicBlock* block = llvm::BasicBlock::Create(llvmContext, "forloop", theFunction);
     llvm::BasicBlock* after = llvm::BasicBlock::Create(llvmContext, "forcont");
+    llvm::BasicBlock* continueBlock = llvm::BasicBlock::Create(llvmContext, "continueBlock");
+
+    continueStack.push(continueBlock);
+    breakStack.push(after);
 
     // 执行初始化语句
     if(forStatement->getInitial()) {
@@ -514,6 +482,9 @@ llvm::Value *CodeGen::visit(const ForStatement * forStatement) {
     visit(forStatement->getForBlock());
     // 函数体执行完毕，栈popAR
     symbolTable.popAR();
+    theFunction->getBasicBlockList().push_back(continueBlock);
+    irBuilder.CreateBr(continueBlock);
+    irBuilder.SetInsertPoint(continueBlock);
     // 做change语句
     if(forStatement->getChange()) {
         visit(forStatement->getChange());
@@ -527,6 +498,9 @@ llvm::Value *CodeGen::visit(const ForStatement * forStatement) {
     theFunction->getBasicBlockList().push_back(after);
     irBuilder.SetInsertPoint(after);
 
+    continueStack.pop();
+    breakStack.pop();
+
     return nullptr;
 }
 
@@ -534,6 +508,10 @@ llvm::Value *CodeGen::visit(const WhileStatement *whileStatement) {
     llvm::Function* theFunction = irBuilder.GetInsertBlock()->getParent();
     llvm::BasicBlock* block = llvm::BasicBlock::Create(llvmContext, "whileloop", theFunction);
     llvm::BasicBlock* after = llvm::BasicBlock::Create(llvmContext, "whilecont");
+    llvm::BasicBlock* continueBlock = llvm::BasicBlock::Create(llvmContext, "continueBlock");
+
+    continueStack.push(continueBlock);
+    breakStack.push(after);
 
     llvm::Value* condValue = visit(whileStatement->getCondition());
     if(!condValue) {
@@ -545,11 +523,17 @@ llvm::Value *CodeGen::visit(const WhileStatement *whileStatement) {
     symbolTable.pushAR();
     visit(whileStatement->getWhileBlock());
     symbolTable.popAR();
+    theFunction->getBasicBlockList().push_back(continueBlock);
+    irBuilder.CreateBr(continueBlock);
+    irBuilder.SetInsertPoint(continueBlock);
     condValue = visit(whileStatement->getCondition());
     condValue = CastToBoolean(llvmContext, condValue);
     irBuilder.CreateCondBr(condValue, block, after);
     theFunction->getBasicBlockList().push_back(after);
     irBuilder.SetInsertPoint(after);
+
+    continueStack.pop();
+    breakStack.pop();
 
     return nullptr;
 }
@@ -590,9 +574,9 @@ llvm::Value *CodeGen::visit(const IOStatement *ioStatement) {
     }
 
     if (ioStatement->getIsRead()) {
-        irBuilder.CreateCall(scanfFunc, args);
+        irBuilder.CreateCall(scanfFunc, args, "scanfResult");
     } else {
-        irBuilder.CreateCall(printfFunc, args);
+        irBuilder.CreateCall(printfFunc, args, "printfResult");
     }
 }
 
@@ -630,3 +614,15 @@ llvm::Value *CodeGen::visit(const AssignExpression *assignExpression) {
     irBuilder.CreateStore(source, target);
     return target;
 }
+
+llvm::Value *CodeGen::visit(const BreakStatement *breakStatement) {
+    auto targetBlock = breakStack.top();
+    return irBuilder.CreateBr(targetBlock);
+}
+
+llvm::Value *CodeGen::visit(const ContinueStatement *continueStatement) {
+    auto targetBlock = continueStack.top();
+    return irBuilder.CreateBr(targetBlock);
+}
+
+

@@ -34,6 +34,8 @@ class CodeGen {
     SymbolTable symbolTable;
     bool hasVisitedMainFunction = false;
     std::stack<llvm::BasicBlock *> blockStack;
+    std::stack<llvm::BasicBlock *> continueStack;
+    std::stack<llvm::BasicBlock *> breakStack;
     std::unordered_map<const Declaration*, llvm::Value *> llvmSymbolTable;
     const Block* rootBlock = nullptr;
     std::unordered_map<const llvm::Function*, std::vector<llvm::Value*>*> lambdaOuterArgsTable;
@@ -62,6 +64,8 @@ class CodeGen {
     llvm::Value *visit(const WhileStatement *);
     llvm::Value *visit(const ReturnStatement *);
     llvm::Value *visit(const IOStatement *);
+    llvm::Value *visit(const BreakStatement *);
+    llvm::Value *visit(const ContinueStatement *);
 
     void dump(const std::string& outputFileName);
     void init(const std::string& inputFileName);
