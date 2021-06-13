@@ -24,7 +24,7 @@ VOID_TYPE void
 READ read
 INT [0-9]+
 FLOAT [0-9]+(".")[0-9]+
-CHAR \'.\'
+CHAR (\'.\')|(\'\\.\')
 STRING \"[^"]*\"
 ELSE else
 FOR for
@@ -38,6 +38,8 @@ NEW new
 CLASS class
 INTERFACE interface
 RETURN return
+CONTINUE continue
+BREAK break
 
 %%
 [\n] {++curLineNum;}
@@ -94,12 +96,46 @@ RETURN return
     return INT;
 }
 {CHAR} {
-    std::string val(1, yytext[1]);
-    yylval.val = new std::string(val);
+    printf("char text: %s\n", yytext);
+    if (yytext[1] != '\\') {
+        std::string val(1, yytext[1]);
+        yylval.val = new std::string(val);
+    } else {
+        if (yytext[2] >= '0' && yytext[2] <= '9') {
+            yylval.val = new std::string(1, yytext[2] - '0');
+        } else if (yytext[2] == 'a') {
+            yylval.val = new std::string(1, '\a');
+        } else if (yytext[2] == 'b') {
+            yylval.val = new std::string(1, '\b');
+        } else if (yytext[2] == 'f') {
+            yylval.val = new std::string(1, '\f');
+        } else if (yytext[2] == 'n') {
+            yylval.val = new std::string(1, '\n');
+        } else if (yytext[2] == 'r') {
+            yylval.val = new std::string(1, '\r');
+        } else if (yytext[2] == 't') {
+            yylval.val = new std::string(1, '\t');
+        } else if (yytext[2] == 'v') {
+            yylval.val = new std::string(1, '\v');
+        } else if (yytext[2] == '\'') {
+            yylval.val = new std::string(1, '\'');
+        } else if (yytext[2] == '\"') {
+            yylval.val = new std::string(1, '\"');
+        } else if (yytext[2] == '\\') {
+            yylval.val = new std::string(1, '\\');
+        }
+    }
     return CHAR;
 }
 {STRING} {
     std::string string_yy(yytext);
+    size_t start_pos = 0;
+    std::string from = "\\\\";
+    std::string to = "\\";
+    while((start_pos = string_yy.find(from, start_pos)) != std::string::npos) {
+        string_yy.replace(start_pos, std::string(from).length(), to);
+        start_pos += to.length();
+    }
     yylval.val = new std::string(string_yy.begin() + 1, string_yy.end() - 1);
     return STRING;
 }
@@ -114,6 +150,8 @@ RETURN return
 {CLASS} { return CLASS;}
 {INTERFACE} { return INTERFACE;}
 {RETURN} {return RETURN;}
+{CONTINUE} {return CONTINUE;}
+{BREAK} {return BREAK;}
 {ID} {yylval.val = new std::string(yytext); return ID;}
 <<EOF>> {return -1;}
 . {lex_error("Unrecognized character", curLineNum);}

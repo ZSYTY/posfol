@@ -6,12 +6,20 @@
 
 #define ISTYPE(value, id) (value->getType()->getTypeID() == id)
 
+llvm::Value *CodeGen::deRef(llvm::Value *ptr) {
+    if (ptr->getType()->isPointerTy()) {
+        return irBuilder.CreateLoad(ptr, "deref");
+    } else {
+        return ptr;
+    }
+};
+
 llvm::Value* CodeGen::CastToBoolean(llvm::LLVMContext& context, llvm::Value* condValue){
     if(ISTYPE(condValue, llvm::Type::IntegerTyID)){
-        condValue = irBuilder.CreateIntCast(condValue, llvm::Type::getInt1Ty(context), true);
-        return irBuilder.CreateICmpNE(condValue, llvm::ConstantInt::get(llvm::Type::getInt1Ty(context), 0, true));
+        condValue = irBuilder.CreateIntCast(condValue, llvm::Type::getInt1Ty(context), true, "intCast");
+        return irBuilder.CreateICmpNE(condValue, llvm::ConstantInt::get(llvm::Type::getInt1Ty(context), 0, true), "intCmp");
     }else if(ISTYPE(condValue, llvm::Type::DoubleTyID)){
-        return irBuilder.CreateFCmpONE(condValue, llvm::ConstantFP::get(context, llvm::APFloat(0.0)));
+        return irBuilder.CreateFCmpONE(condValue, llvm::ConstantFP::get(context, llvm::APFloat(0.0)), "floatCmp");
     }else{
         return condValue;
     }
@@ -23,24 +31,28 @@ void CodeGen::init(const std::string& inputFileName) {
 }
 
 void CodeGen::dump(const std::string& outputFileName) {
-    std::string output;
-    llvm::raw_string_ostream out(output);
     this->module.print(llvm::outs(), nullptr);
-
-    std::cout << output << std::endl;
-    std::ofstream os(outputFileName);
-    os << output << std::endl; // TODO: cannot output to file
-//    module.dump();
+    std::error_code EC;
+    llvm::raw_fd_ostream os(outputFileName, EC);
+    this->module.print(os, nullptr);
 }
 
 void CodeGen::genCode(const Block *root, const std::string& inputFileName, const std::string& outputFileName) {
 //    init(inputFileName);
     rootBlock = root;
+    new llvm::GlobalVariable(module, llvm::Type::getInt1Ty(llvmContext), false,
+                             llvm::GlobalValue::CommonLinkage, getInitValue(llvm::Type::getInt1Ty(llvmContext)), "_#_bool_sc");
     visit(root);
     if (! hasVisitedMainFunction) {
         genMainFunctionContext();
     }
     dump(outputFileName);
+}
+
+void CodeGen::genBinary(const Block *root, const std::string &inputFileName, const std::string &outputFileName) {
+    genCode(root, inputFileName, "a.ll");
+    system("llc a.ll");
+    system(("gcc -o " + outputFileName + " -lm a.ll").c_str());
 }
 
 CodeGen::CodeGen(): module("posfol", llvmContext), irBuilder(llvmContext) {
@@ -51,110 +63,74 @@ llvm::Value *CodeGen::visit(const Statement *stmt) {
     switch (stmt->getType()) {
         case BLOCK:
             return visit(dynamic_cast<const Block *>(stmt));
-            break;
         case IDENTIFIER:
-            return visit(dynamic_cast<const Identifier *>(stmt));
-            break;
+            return visit(dynamic_cast<const Identifier *>(stmt)).value;
         case ARITHMETICEXPRESSION:
             return visit(dynamic_cast<const ArithmeticExpression *>(stmt));
-            break;
         case BINARYOPERATOR:
             return visit(dynamic_cast<const BinaryOperator *>(stmt));
-            break;
         case UNARYOPERATOR:
             return visit(dynamic_cast<const UnaryOperator *>(stmt));
-            break;
         case TYPECONVERTOPERATOR:
             return visit(dynamic_cast<const TypeConvertOperator *>(stmt));
-            break;
         case CLASSNEWEXPRESSION:
             return visit(dynamic_cast<const ClassNewExpression *>(stmt));
-            break;
         case ENTITYEXPRESSION:
-            return visit(dynamic_cast<const Entity *>(stmt));
-            break;
+            return visit(dynamic_cast<const Entity *>(stmt)).value;
         case VARIABLEDECLARATION:
             return visit(dynamic_cast<const VariableDeclaration *>(stmt));
-            break;
         case LAMBDADECLARATION:
             return visit(dynamic_cast<const LambdaExpression *>(stmt));
-            break;
         case FUNCTIONDECLARATION:
             return visit(dynamic_cast<const FunctionDeclaration *>(stmt));
-            break;
         case CLASSDECLARATION:
             return visit(dynamic_cast<const ClassDeclaration *>(stmt));
-            break;
         case INTERFACEDECLARATION:
             return visit(dynamic_cast<const InterfaceDeclaration *>(stmt));
-            break;
         case IFSTATEMENT:
             return visit(dynamic_cast<const IfStatement *>(stmt));
-            break;
         case FORSTATEMENT:
             return visit(dynamic_cast<const ForStatement *>(stmt));
-            break;
         case WHILESTATEMENT:
             return visit(dynamic_cast<const WhileStatement *>(stmt));
-            break;
         case RETURNSTATEMENT:
             return visit(dynamic_cast<const ReturnStatement *>(stmt));
-            break;
         case IOSTATEMENT:
             return visit(dynamic_cast<const IOStatement *>(stmt));
-            break;
-        case NODE:
-            break;
+        case BREAKSTATEMENT:
+            return visit(dynamic_cast<const BreakStatement *>(stmt));
+        case CONTINUESTATEMENT:
+            return visit(dynamic_cast<const ContinueStatement *>(stmt));
         case EXPRESSION:
             return visit(dynamic_cast<const Expression *>(stmt));
-            break;
-        case CLASSEXPRESSION:
-            break;
-        case CLASSVARIABLEEXPRESSION:
-            break;
-        case CLASSFUNCEXPRESSION:
-            break;
         case ASSIGNEXPRESSION:
             return visit(dynamic_cast<const AssignExpression *>(stmt));
-            break;
+        case NODE:
+        case CLASSEXPRESSION:
+        case CLASSVARIABLEEXPRESSION:
+        case CLASSFUNCEXPRESSION:
         case DECLARATION:
-            break;
         case STATEMENT:
-            break;
         case LOGICSTATEMENT:
-            break;
         case INT_DEFINE_TYPE:
-            break;
         case LONG_DEFINE_TYPE:
-            break;
         case FLOAT_DEFINE_TYPE:
-            break;
         case DOUBLE_DEFINE_TYPE:
-            break;
         case BOOLEAN_DEFINE_TYPE:
-            break;
         case CHAR_DEFINE_TYPE:
-            break;
         case FUNC_DEFINE_TYPE:
-            break;
         case VOID_DEFINE_TYPE:
-            break;
         case CLASS_DEFINE_TYPE:
-            break;
         case ARRAY:
-            break;
         case TYPE:
-            break;
         case NAME:
-            break;
         case VALUE:
-            break;
         case ERROR:
-            break;
+            return nullptr;
     }
 }
 
-llvm::BasicBlock *CodeGen::visit(const Block *block) {
+llvm::BasicBlock *CodeGen::visit(const Block *block, bool shouldCreateNewBlock, std::string blockName) {
     if (block == nullptr) {
         return nullptr;
     }
@@ -162,9 +138,9 @@ llvm::BasicBlock *CodeGen::visit(const Block *block) {
     if (block != rootBlock) {
         symbolTable.pushAR();
     }
-    if (! symbolTable.isGlobal()) {
+    if (! symbolTable.isGlobal() and shouldCreateNewBlock) {
         llvm::Function *function = irBuilder.GetInsertBlock()->getParent();
-        BB = llvm::BasicBlock::Create(llvmContext, "", function);
+        BB = llvm::BasicBlock::Create(llvmContext, blockName, function);
         irBuilder.SetInsertPoint(BB);
     }
     for (auto stmt : *block->getStatementList()) {
@@ -180,18 +156,23 @@ llvm::BasicBlock *CodeGen::visit(const Block *block) {
     return BB;
 }
 
-llvm::Value *CodeGen::visit(const Identifier *identifier, bool deref) {
+ExValue CodeGen::visit(const Identifier *identifier, bool deref) {
     assert(! identifier->getIsType());
     if (identifier->getType() == NAME) {
         auto value = llvmSymbolTable[symbolTable.findSymbol(identifier->getValue())];
+        auto variableDeclaration = dynamic_cast<const VariableDeclaration*>(symbolTable.findSymbol(identifier->getValue()));
+        auto functionDeclaration = dynamic_cast<const FunctionDeclaration*>(symbolTable.findSymbol(identifier->getValue()));
+        Type type = variableDeclaration ? variableDeclaration->getVarType()->getType() :
+                functionDeclaration ? functionDeclaration->getReturnType()->getType() : NAME;
+        std::string className = variableDeclaration ? variableDeclaration->getVarType()->getValue() :
+                                functionDeclaration ? functionDeclaration->getReturnType()->getValue() : "";
         if (deref) {
-            return irBuilder.CreateLoad(value, "deref");
+            return ExValue(irBuilder.CreateLoad(value, "deref"), type, className);
         } else {
-            return value;
+            return ExValue(value, type, className);
         }
     } else {
-        std::cout << "constant" << std::endl;
-        return genConstant(identifier);
+        return ExValue(genConstant(identifier), NAME, "");
     }
 }
 
@@ -245,9 +226,9 @@ llvm::Value *CodeGen::visit(const BinaryOperator *binaryOperator) {
 }
 
 llvm::Value *CodeGen::visit(const UnaryOperator *unaryOperator) {
-    llvm::Value *hs = visit(unaryOperator->getHs());
+    llvm::Value *hs = visit(unaryOperator->getHs(), true);
     bool isFP = hs->getType()->isFloatTy();
-    switch (unaryOperator->getType()) {
+    switch (unaryOperator->getOp()) {
         case 0: // -
             return isFP ? irBuilder.CreateFNeg(hs, "negResult") : irBuilder.CreateNeg(hs, "negResult");
         case 1: // !
@@ -258,42 +239,83 @@ llvm::Value *CodeGen::visit(const UnaryOperator *unaryOperator) {
 }
 
 llvm::Value *CodeGen::visit(const TypeConvertOperator *typeConvertOperator) {
-    llvm::Value *value = visit(typeConvertOperator->getExpr());
+    llvm::Value *value = deRef(visit(typeConvertOperator->getExpr()));
     // TODO: casting
+    auto targetType = typeConvertOperator->getOp()->getType();
+    if (targetType == INT_DEFINE_TYPE) {
+        return irBuilder.CreateSExt(value, getType(targetType), "charToInt");
+    } else if (targetType == FLOAT_DEFINE_TYPE) {
+        return irBuilder.CreateSIToFP(value, getType(targetType), "intToFloat");
+    }
+    // TODO:
+    return value;
 }
 
-llvm::Value *CodeGen::visit(const ClassNewExpression *) {
-
+llvm::Value *CodeGen::visit(const ClassNewExpression *classNewExpression) {
+    return visit(new Entity(new Entity(new Identifier(NAME, classNewExpression->getClassName()->getValue() + "constructor")), classNewExpression->getParamExprList())).value;
 }
 
-llvm::Value *CodeGen::visit(const Entity *entity, bool deref) {
+ExValue CodeGen::visit(const Entity *entity, bool deref) {
 
-    auto deRef = [this](llvm::Value *ptr) {
-        return this->irBuilder.CreateLoad(ptr, "deref");
-    };
     if (entity->getIsTerminal()) {
         return visit(entity->getIdentifier(), deref);
     } else if (entity->getIsArrayIndex()) {
         // TODO:
-        llvm::Value* array = visit(entity->getEntity());
-        llvm::Value* indexExpr = visit(entity->getExpression());
-        return irBuilder.CreateGEP(array, {llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext), 0, true), indexExpr});
+        ExValue visitValue = visit(entity->getEntity());
+        llvm::Value* array = visitValue.value;
+        llvm::Value* indexExpr = visit(entity->getExpression(), true);
+        llvm::Value* result = irBuilder.CreateGEP(array, {llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext), 0, true), indexExpr}, "arrayIndex");
+        if (deref and result->getType()->isPointerTy()) {
+            result = deRef(result);
+        }
+        return ExValue(result, visitValue.type, visitValue.className);
     } else if (entity->getIsFunctionCall()) {
-        auto fn = visit(entity->getEntity());
+        ExValue visitValue = visit(entity->getEntity());
+        auto fn = visitValue.value;
 //        auto deRef = [this](llvm::Value *ptr) {
 //            return this->irBuilder.CreateLoad(ptr, "deref");
 //        };
         std::vector<llvm::Value *> paramsVal;
-//        auto pregs = lambdaOuterArgsTable[reinterpret_cast<llvm::Function*>(fn)];
-//        for (const auto &preg : *pregs) {
-//            paramsVal.emplace_back(preg);
-//        }
-        for (const auto &arg : *entity->getVectorExpression()) {
-            paramsVal.emplace_back(deRef(visit(arg)));
+        if (lambdaOuterArgsTable.find(reinterpret_cast<llvm::Function*>(fn)) != lambdaOuterArgsTable.end()) {
+            auto pregs = lambdaOuterArgsTable[reinterpret_cast<llvm::Function*>(fn)];
+            for (const auto &preg : *pregs) {
+                paramsVal.emplace_back(deRef(preg));
+            }
         }
-        return irBuilder.CreateCall(reinterpret_cast<llvm::Function *>(fn), paramsVal, "call_fn");
+        for (const auto &arg : *entity->getVectorExpression()) {
+            auto expr = visit(arg);
+            paramsVal.emplace_back(deRef(expr));
+        }
+        if (visitValue.objValue != nullptr) {
+            paramsVal.emplace_back(deRef(visitValue.objValue));
+        }
+        auto* func = reinterpret_cast<llvm::Function *>(fn);
+        if (func->getReturnType()->isVoidTy()) {
+            return ExValue(irBuilder.CreateCall(func, paramsVal), visitValue.type, visitValue.className);
+        } else {
+            llvm::Value *returnValue = irBuilder.CreateCall(func, paramsVal, "call_fn");
+            if (deref and returnValue->getType()->isPointerTy()) {
+                returnValue = deRef(returnValue);
+            }
+            return ExValue(returnValue, visitValue.type, visitValue.className);;
+        }
     } else if (entity->getIsObjectCall()) {
         // TODO:
+        ExValue visitValue = visit(entity->getEntity());
+        llvm::Value* obj = visitValue.value;
+        ClassDeclaration* classDeclaration = (ClassDeclaration *) symbolTable.findSymbol(visitValue.className);
+        if (classMemberTable[classDeclaration].find(entity->getIdentifier()->getValue()) != classMemberTable[classDeclaration].end()) {
+            int bias = getNameIdInClass(classDeclaration, entity->getIdentifier()->getValue());
+            auto memberDecl = classMemberTable[classDeclaration][entity->getIdentifier()->getValue()];
+            return ExValue(irBuilder.CreateGEP(obj,
+                                               {llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext), 0, true),
+                                                llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext), bias,
+                                                                       true)}),
+                           memberDecl.first, memberDecl.second);
+        } else {
+            ExValue func = visit(new Identifier(NAME, entity->getIdentifier()->getValue() + "_of_" + classDeclaration->getClass()->getValue()));
+            return ExValue(func.value, func.type, func.className, obj);
+        }
     }
 }
 
@@ -304,56 +326,87 @@ llvm::Value *CodeGen::visit(const VariableDeclaration * variableDeclaration) {
     llvm::Value *value = nullptr;
     auto arraySizes = variableDeclaration->getArraySizes();
     llvm::Value *arraySize = nullptr;
-    auto *sizeList = new std::vector<llvm::ConstantInt *>;
+    auto *sizeList = getSizeList(arraySizes);
+
     if (arraySizes) {
-
-        for (auto &item : *arraySizes) {
-            sizeList->push_back(static_cast<llvm::ConstantInt *>(visit(item)));
-        }
-
         arraySize = sizeList->front();
         for (int i = 1; i < sizeList->size(); i++) {
             arraySize = irBuilder.CreateMul(arraySize, (*sizeList)[i]);
         }
     }
 
-    auto type = getType(varType, arraySizes ? sizeList : nullptr);
+    auto type = getType(varType, variableDeclaration->getVarType()->getValue(), arraySizes ? sizeList : nullptr);
 
-    if (! type->isVoidTy()) {
+    if (varType == FUNC_DEFINE_TYPE) {
+        auto name = variableDeclaration->getVar()->getValue();
+        value = expressionResult;
+        symbolTable.push(name, variableDeclaration);
+        llvmSymbolTable[variableDeclaration] = value;
+    } else if (! type->isVoidTy()) {
         auto name = variableDeclaration->getVar()->getValue();
         if (symbolTable.isGlobal()) {
+            llvm::Constant *initValue = nullptr;
+            if (expressionResult) {
+                if (expressionResult->getType()->isPointerTy()) {
+                    initValue = static_cast<llvm::Constant *>(deRef(expressionResult));
+                } else {
+                    initValue = static_cast<llvm::Constant *>(expressionResult);
+                }
+            } else {
+                initValue = getInitValue(type);
+            }
             value = new llvm::GlobalVariable(module, type, false,
-                                     llvm::GlobalValue::CommonLinkage, nullptr, name);
+                                     llvm::GlobalValue::CommonLinkage, initValue, name);
         } else {
             value = irBuilder.CreateAlloca(type, arraySize, name);
             if (expressionResult) {
+                if (expressionResult->getType()->isPointerTy()) {
+                    expressionResult = deRef(expressionResult);
+                }
                 irBuilder.CreateStore(expressionResult, value);
             }
         }
         symbolTable.push(name, variableDeclaration);
         llvmSymbolTable[variableDeclaration] = value;
     }
+    delete sizeList;
     return value;
 }
 
 llvm::Value *CodeGen::visit(const LambdaExpression *lambdaExpression) {
     std::vector<llvm::Type *> args;
-    auto* outerArgs = new std::vector<llvm::Value *>();
+    auto outerArgs = new std::vector<llvm::Value *>();
+    auto* outerArgsDecl = new std::vector<VariableDeclaration*>();
     for (auto item : *lambdaExpression->getOuterVars()) {
-        outerArgs->push_back(visit(item));
-        args.push_back(getType(symbolTable.findSymbol(item->getValue())->getType()));
+        auto outerArg = visit(item);
+        outerArgs->push_back(outerArg.value);
+        VariableDeclaration* outerArgDecl = (VariableDeclaration *) symbolTable.findSymbol(item->getValue());
+        outerArgsDecl->push_back(reinterpret_cast<VariableDeclaration *const>(outerArgDecl));
+        args.push_back(getType(outerArgDecl->getVarType()->getType(), outerArgDecl->getVarType()->getValue()));
     }
     for (auto item : *lambdaExpression->getParamList()) {
-        args.push_back(getType(item->getType()));
+        args.push_back(getType(item->getVarType()->getType(), item->getVarType()->getValue()));
     }
 
-    llvm::Function *function = genCFunction("lambda", getType(lambdaExpression->getReturnType()->getType()), args, false);
+    llvm::Function *function = genCFunction("lambda", getType(lambdaExpression->getReturnType()->getType(), lambdaExpression->getReturnType()->getValue()), args, false);
     genFunctionContext("lambda", function);
 
+    int idx = 0;
+    for (auto &argItem : function->args()) {
+        VariableDeclaration *variableDeclaration = nullptr;
+        if (idx < outerArgsDecl->size()) {
+            auto originalDeclaration = outerArgsDecl->at(idx++);
+            variableDeclaration = new VariableDeclaration(originalDeclaration->getVarType(), originalDeclaration->getVar());
+        } else {
+            variableDeclaration = lambdaExpression->getParamList()->at(idx++ - outerArgsDecl->size());
+        }
+        argItem.setName(variableDeclaration->getVar()->getValue());
+        irBuilder.CreateStore(&argItem, visit(variableDeclaration));
+    }
     lambdaOuterArgsTable[function] = outerArgs;
-
     visit(lambdaExpression->getFuncBlock());
     endFunctionOrBlock();
+
     return function;
 }
 
@@ -366,9 +419,13 @@ llvm::Value *CodeGen::visit(const FunctionDeclaration *functionDeclaration) {
     } else {
         std::vector<llvm::Type *> args;
         for (auto item : *functionDeclaration->getParamList()) {
-            args.push_back(getType(item->getVarType()->getType()));
+            if (item->getArraySizes()) {
+                args.push_back(getType(item->getVarType()->getType(), item->getVarType()->getValue(), getSizeList(item->getArraySizes())));
+            } else {
+                args.push_back(getType(item->getVarType()->getType(), item->getVarType()->getValue()));
+            }
         }
-        function = genCFunction(name, getType(functionDeclaration->getReturnType()->getType()), args, false);
+        function = genCFunction(name, getType(functionDeclaration->getReturnType()->getType(), functionDeclaration->getReturnType()->getValue()), args, false);
         genFunctionContext(name, function);
         llvmSymbolTable[functionDeclaration] = function;
         int idx = 0;
@@ -378,39 +435,132 @@ llvm::Value *CodeGen::visit(const FunctionDeclaration *functionDeclaration) {
             irBuilder.CreateStore(&argItem, visit(varDeclaration));
         }
     }
+    symbolTable.push(name, functionDeclaration);
     visit(functionDeclaration->getFuncBlock());
     endFunctionOrBlock();
     symbolTable.push(name, functionDeclaration);
     return function;
 }
 
-llvm::Value *CodeGen::visit(const ClassDeclaration *) {
-
+llvm::Value *CodeGen::visit(const ClassDeclaration *classDeclaration) {
+    std::vector<llvm::Type *> vec;
+    classMemberTable[classDeclaration] = std::unordered_map<std::string, std::pair<Type, std::string>>();
+    for (const auto &stmt : *classDeclaration->getClassBlock()->getStatementList()) {
+        if (dynamic_cast<const VariableDeclaration*>(stmt) != nullptr) {
+            auto varDecl = reinterpret_cast<const VariableDeclaration*>(stmt);
+            auto arraySizes = varDecl->getArraySizes();
+            llvm::Value *arraySize = nullptr;
+            auto *sizeList = getSizeList(arraySizes);
+            if (arraySizes) {
+                arraySize = sizeList->front();
+                for (int i = 1; i < sizeList->size(); i++) {
+                    arraySize = irBuilder.CreateMul(arraySize, (*sizeList)[i]);
+                }
+            }
+            classMemberTable[classDeclaration][varDecl->getVar()->getValue()] = make_pair(varDecl->getVarType()->getType(), varDecl->getVarType()->getValue());
+            vec.emplace_back(getType(varDecl->getVarType()->getType(), varDecl->getVarType()->getValue(), arraySizes ? sizeList : nullptr, nullptr));
+        }
+    }
+    auto type = llvm::StructType::get(llvmContext, vec);
+    symbolTable.push(classDeclaration->getClass()->getValue(), classDeclaration);
+    llvmTypeTable[classDeclaration] = type;
+    std::unordered_map<std::string, std::vector<Identifier*>> methods;
+    for (const auto &stmt : *classDeclaration->getClassBlock()->getStatementList()) {
+        if (dynamic_cast<const FunctionDeclaration*>(stmt) != nullptr) {
+            auto funcDecl = reinterpret_cast<const FunctionDeclaration*>(stmt);
+            if (funcDecl->getReturnType()->getType() == NAME) {
+                auto beg = funcDecl->getFuncBlock()->getStatementList()->begin();
+                funcDecl->getFuncBlock()->getStatementList()->insert(beg,
+                        new VariableDeclaration(new Identifier(CLASS_DEFINE_TYPE, funcDecl->getFunc()->getValue()),
+                                                new Identifier(NAME, "self")));
+                funcDecl->getFuncBlock()->getStatementList()->push_back(
+                        new ReturnStatement(new Entity(new Identifier(NAME, "self"))));
+                visit(new FunctionDeclaration(
+                        new Identifier(CLASS_DEFINE_TYPE, funcDecl->getReturnType()->getValue()),
+                        new Identifier(NAME, funcDecl->getFunc()->getValue() + "constructor"),
+                        funcDecl->getParamList(), funcDecl->getFuncBlock()));
+            } else {
+                funcDecl->getParamList()->push_back(new VariableDeclaration(new Identifier(CLASS_DEFINE_TYPE, classDeclaration->getClass()->getValue()),
+                                                                                             new Identifier(NAME, "self")));
+                visit(new FunctionDeclaration(
+                        funcDecl->getReturnType(),
+                        new Identifier(NAME, funcDecl->getFunc()->getValue() + "_of_" + classDeclaration->getClass()->getValue()),
+                        funcDecl->getParamList(), funcDecl->getFuncBlock()));
+                methods[funcDecl->getFunc()->getValue()] = std::vector<Identifier*>();
+                methods[funcDecl->getFunc()->getValue()].push_back(funcDecl->getReturnType());
+                for (const auto &type : *funcDecl->getParamList()) {
+                    methods[funcDecl->getFunc()->getValue()].push_back(
+                            reinterpret_cast<Identifier *const>(type));
+                }
+            }
+        }
+    }
+    if (classDeclaration->getInterface() != nullptr) {
+        std::unordered_map<std::string, std::vector<Identifier*>> interfaceMethods = interfaceMethodTable[symbolTable.findSymbol(classDeclaration->getInterface()->getValue())];
+        for (const auto &[name, vec] : interfaceMethods) {
+            if (methods.find(name) == methods.end()) {
+                std::cerr << "Class " << classDeclaration->getClass()->getValue() << " does not implement the method " << name << " in interface " << classDeclaration->getInterface()->getValue() << std::endl;
+                exit(2);
+            }
+            for (int i = 0; i < vec.size(); ++i) {
+                if (vec[i]->getType() == CLASS_DEFINE_TYPE) {
+                    if (methods[name][i]->getType() != CLASS_DEFINE_TYPE
+                    || vec[i]->getValue() != methods[name][i]->getValue()) {
+                        std::cerr << "Class " << classDeclaration->getClass()->getValue() << " does not implement the method " << name << " in interface " << classDeclaration->getInterface()->getValue() << std::endl;
+                        exit(2);
+                    }
+                } else {
+                    if (vec[i]->getValue() != methods[name][i]->getValue()) {
+                        std::cerr << "Class " << classDeclaration->getClass()->getValue() << " does not implement the method " << name << " in interface " << classDeclaration->getInterface()->getValue() << std::endl;
+                        exit(2);
+                    }
+                }
+            }
+        }
+    }
+    return nullptr;
 }
 
-llvm::Value *CodeGen::visit(const InterfaceDeclaration *) {
-
+llvm::Value *CodeGen::visit(const InterfaceDeclaration *interfaceDeclaration) {
+    interfaceMethodTable[interfaceDeclaration] = std::unordered_map<std::string, std::vector<Identifier*>>();
+    symbolTable.push(interfaceDeclaration->getInterface()->getValue(), interfaceDeclaration);
+    for (const auto &stmt : *interfaceDeclaration->getInterfaceBlock()->getStatementList()) {
+        if (dynamic_cast<const FunctionDeclaration *>(stmt) != nullptr) {
+            auto funcDecl = reinterpret_cast<const FunctionDeclaration*>(stmt);
+            interfaceMethodTable[interfaceDeclaration][funcDecl->getFunc()->getValue()] = std::vector<Identifier*>();
+            interfaceMethodTable[interfaceDeclaration][funcDecl->getFunc()->getValue()].push_back(funcDecl->getReturnType());
+            for (const auto &type : *funcDecl->getParamList()) {
+                interfaceMethodTable[interfaceDeclaration][funcDecl->getFunc()->getValue()].push_back(
+                        reinterpret_cast<Identifier *const>(type));
+            }
+        }
+    }
+    return nullptr;
 }
 
 llvm::Value *CodeGen::visit(const IfStatement *ifStatement) {
     llvm::Function* theFunction = irBuilder.GetInsertBlock()->getParent();
-    llvm::Value* condValue = visit(ifStatement->getCondition());
+    llvm::Value* condValue = deRef(visit(ifStatement->getCondition()));
     llvm::BasicBlock* beforeBlock = irBuilder.GetInsertBlock();
-    llvm::BasicBlock* trueBlock = visit(ifStatement->getTrueBlock());
-    llvm::BasicBlock* falseBlock = visit(ifStatement->getFalseBlock());
+    llvm::BasicBlock* trueBlock = visit(ifStatement->getTrueBlock(), true, "trueBlock");
+    llvm::BasicBlock* afterTrueBlock = irBuilder.GetInsertBlock();
+    llvm::BasicBlock* falseBlock = visit(ifStatement->getFalseBlock(), true, "falseBlock");
+    llvm::BasicBlock* afterFalseBlock = irBuilder.GetInsertBlock();
     llvm::BasicBlock* afterBlock = llvm::BasicBlock::Create(llvmContext, "after", theFunction);
-    if(falseBlock) {
+    if (falseBlock) {
         irBuilder.SetInsertPoint(beforeBlock);
         irBuilder.CreateCondBr(CastToBoolean(llvmContext, condValue), trueBlock, falseBlock);
-        irBuilder.SetInsertPoint(trueBlock);
+        irBuilder.SetInsertPoint(afterTrueBlock);
         irBuilder.CreateBr(afterBlock);
-        irBuilder.SetInsertPoint(falseBlock);
+        irBuilder.SetInsertPoint(afterFalseBlock);
         irBuilder.CreateBr(afterBlock);
         irBuilder.SetInsertPoint(afterBlock);
 //        irBuilder.SetInsertPoint();
     } else {
         irBuilder.SetInsertPoint(beforeBlock);
         irBuilder.CreateCondBr(CastToBoolean(llvmContext, condValue), trueBlock, afterBlock);
+        irBuilder.SetInsertPoint(afterTrueBlock);
+        irBuilder.CreateBr(afterBlock);
         irBuilder.SetInsertPoint(afterBlock);
     }
 }
@@ -419,6 +569,10 @@ llvm::Value *CodeGen::visit(const ForStatement * forStatement) {
     llvm::Function* theFunction = irBuilder.GetInsertBlock()->getParent();
     llvm::BasicBlock* block = llvm::BasicBlock::Create(llvmContext, "forloop", theFunction);
     llvm::BasicBlock* after = llvm::BasicBlock::Create(llvmContext, "forcont");
+    llvm::BasicBlock* continueBlock = llvm::BasicBlock::Create(llvmContext, "continueBlock");
+
+    continueStack.push(continueBlock);
+    breakStack.push(after);
 
     // 执行初始化语句
     if(forStatement->getInitial()) {
@@ -442,6 +596,9 @@ llvm::Value *CodeGen::visit(const ForStatement * forStatement) {
     visit(forStatement->getForBlock());
     // 函数体执行完毕，栈popAR
     symbolTable.popAR();
+    theFunction->getBasicBlockList().push_back(continueBlock);
+    irBuilder.CreateBr(continueBlock);
+    irBuilder.SetInsertPoint(continueBlock);
     // 做change语句
     if(forStatement->getChange()) {
         visit(forStatement->getChange());
@@ -455,6 +612,9 @@ llvm::Value *CodeGen::visit(const ForStatement * forStatement) {
     theFunction->getBasicBlockList().push_back(after);
     irBuilder.SetInsertPoint(after);
 
+    continueStack.pop();
+    breakStack.pop();
+
     return nullptr;
 }
 
@@ -462,6 +622,10 @@ llvm::Value *CodeGen::visit(const WhileStatement *whileStatement) {
     llvm::Function* theFunction = irBuilder.GetInsertBlock()->getParent();
     llvm::BasicBlock* block = llvm::BasicBlock::Create(llvmContext, "whileloop", theFunction);
     llvm::BasicBlock* after = llvm::BasicBlock::Create(llvmContext, "whilecont");
+    llvm::BasicBlock* continueBlock = llvm::BasicBlock::Create(llvmContext, "continueBlock");
+
+    continueStack.push(continueBlock);
+    breakStack.push(after);
 
     llvm::Value* condValue = visit(whileStatement->getCondition());
     if(!condValue) {
@@ -473,18 +637,28 @@ llvm::Value *CodeGen::visit(const WhileStatement *whileStatement) {
     symbolTable.pushAR();
     visit(whileStatement->getWhileBlock());
     symbolTable.popAR();
+    theFunction->getBasicBlockList().push_back(continueBlock);
+    irBuilder.CreateBr(continueBlock);
+    irBuilder.SetInsertPoint(continueBlock);
     condValue = visit(whileStatement->getCondition());
     condValue = CastToBoolean(llvmContext, condValue);
     irBuilder.CreateCondBr(condValue, block, after);
     theFunction->getBasicBlockList().push_back(after);
     irBuilder.SetInsertPoint(after);
 
+    continueStack.pop();
+    breakStack.pop();
+
     return nullptr;
 }
 
 llvm::Value *CodeGen::visit(const ReturnStatement *returnStatement) {
-    llvm::Value *returnValue = visit(returnStatement->getReturnExpr());
-    return irBuilder.CreateRet(returnValue);
+    if (returnStatement->getReturnExpr()) {
+        llvm::Value *returnValue = visit(returnStatement->getReturnExpr(), true);
+        return irBuilder.CreateRet(returnValue);
+    } else {
+        return irBuilder.CreateRetVoid();
+    }
 }
 
 llvm::Value *CodeGen::visit(const IOStatement *ioStatement) {
@@ -493,29 +667,33 @@ llvm::Value *CodeGen::visit(const IOStatement *ioStatement) {
     static llvm::Function *scanfFunc = genCFunction("scanf",
                                                     llvm::Type::getInt32Ty(llvmContext), { llvm::Type::getInt8PtrTy(llvmContext) }, true);
     std::vector<llvm::Value *> args;
-    std::string fmtStr = "";
-    llvm::Value *value = nullptr;
+    args.push_back(irBuilder.CreateGlobalStringPtr(ioStatement->getPrintText(), "formatString", 0, &module));
 
-    if (ioStatement->getExpr()) {
-        value = visit(ioStatement->getExpr());
-        fmtStr = getFmtStr(value->getType());
-    } else if (ioStatement->getEntity()) {
-        value = visit(ioStatement->getEntity());
-        fmtStr = getFmtStr(value->getType());
+    if (ioStatement->getVectorExpression()) {
+        for (auto item : *ioStatement->getVectorExpression()) {
+            llvm::Value *arg = visit(item);
+            auto zero = llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext), 0, true);
+            if (arg->getType()->isPointerTy()) {
+                auto value = deRef(arg);
+                if (value->getType()->isArrayTy()) {
+                    arg = irBuilder.CreateGEP(arg, {zero, zero}, "arrayIndex");
+                } else {
+                    if (!ioStatement->getIsRead()) {
+                        arg = value;
+                    }
+                }
+            }
+            if (arg->getType()->isFloatTy()) {
+                arg = irBuilder.CreateFPExt(arg, llvm::Type::getDoubleTy(llvmContext), "promoteToDouble");
+            }
+            args.push_back(arg);
+        }
     }
 
     if (ioStatement->getIsRead()) {
-        args.push_back(irBuilder.CreateGlobalStringPtr(fmtStr, "fmtStr"));
-        args.push_back(value);
-        irBuilder.CreateCall(scanfFunc, args, "readSysFunc");
+        irBuilder.CreateCall(scanfFunc, args, "scanfResult");
     } else {
-        if (ioStatement->getExpr()) {
-            args.push_back(irBuilder.CreateGlobalStringPtr(fmtStr, "fmtStr"));
-            args.push_back(value);
-        } else {
-            args.push_back(irBuilder.CreateGlobalStringPtr(ioStatement->getPrintText(), "printStr"));
-        }
-        irBuilder.CreateCall(printfFunc, args, "printSysFunc");
+        irBuilder.CreateCall(printfFunc, args, "printfResult");
     }
 }
 
@@ -526,6 +704,7 @@ llvm::Value *CodeGen::visit(const Expression * expression, bool deref) {
         case ASSIGNEXPRESSION:
             return visit(dynamic_cast<const AssignExpression *>(expression));
         case CLASSNEWEXPRESSION:
+            return visit(dynamic_cast<const ClassNewExpression *>(expression));
             break;
         case CLASSEXPRESSION:
             break;
@@ -534,17 +713,34 @@ llvm::Value *CodeGen::visit(const Expression * expression, bool deref) {
         case CLASSFUNCEXPRESSION:
             break;
         case ENTITYEXPRESSION:
-            return visit(dynamic_cast<const Entity *>(expression), deref);
+            return visit(dynamic_cast<const Entity *>(expression), deref).value;
         case INT_VALUE: case LONG_VALUE: case FLOAT_VALUE: case DOUBLE_VALUE: case CHAR_VALUE: case BOOLEAN_VALUE:
-            return visit(dynamic_cast<const Identifier *>(expression), true);
+            return visit(dynamic_cast<const Identifier *>(expression), true).value;
+        case LAMBDADECLARATION:
+            return visit(dynamic_cast<const LambdaExpression *>(expression));
         default:
             return nullptr;
     }
 }
 
 llvm::Value *CodeGen::visit(const AssignExpression *assignExpression) {
-    llvm::Value *target = visit(assignExpression->getEntity());
+    llvm::Value *target = visit(assignExpression->getEntity()).value;
     llvm::Value *source = visit(assignExpression->getExpr());
+    if (source->getType()->isPointerTy()) {
+        source = deRef(source);
+    }
     irBuilder.CreateStore(source, target);
     return target;
 }
+
+llvm::Value *CodeGen::visit(const BreakStatement *breakStatement) {
+    auto targetBlock = breakStack.top();
+    return irBuilder.CreateBr(targetBlock);
+}
+
+llvm::Value *CodeGen::visit(const ContinueStatement *continueStatement) {
+    auto targetBlock = continueStack.top();
+    return irBuilder.CreateBr(targetBlock);
+}
+
+

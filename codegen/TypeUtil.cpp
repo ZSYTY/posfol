@@ -13,7 +13,7 @@ llvm::Type *createArray(llvm::Type *type, std::vector<llvm::ConstantInt *>* size
     
 }
 
-llvm::Type * CodeGen::getType(Type type, std::vector<llvm::ConstantInt *>* arraySizeList) {
+llvm::Type * CodeGen::getType(Type type, const std::string& className, std::vector<llvm::ConstantInt *>* arraySizeList, llvm::FunctionType * lambdaType) {
     llvm::Type* llvmType = nullptr;
     switch (type) {
         case INT_DEFINE_TYPE:
@@ -39,6 +39,11 @@ llvm::Type * CodeGen::getType(Type type, std::vector<llvm::ConstantInt *>* array
         case CHAR_DEFINE_TYPE:
         case CHAR_VALUE:
             llvmType = llvm::Type::getInt8Ty(llvmContext);
+            break;
+        case FUNC_DEFINE_TYPE:
+            break;
+        case CLASS_DEFINE_TYPE:
+            llvmType = llvmTypeTable[symbolTable.findSymbol(className)];
             break;
         default:
             llvmType = llvm::Type::getVoidTy(llvmContext);
@@ -90,3 +95,24 @@ llvm::Constant *CodeGen::genConstant(const Identifier *identifier) {
     }
 }
 
+llvm::Constant * CodeGen::getInitValue(llvm::Type *type) {
+    if (type->isIntegerTy()) {
+        return llvm::ConstantInt::get(type, 0);
+    } else if (type->isFloatTy()) {
+        return llvm::ConstantFP::get(type, 0.0);
+    } else if (type->isArrayTy()) {
+        return llvm::ConstantAggregateZero::get(type);
+    } else {
+        return nullptr;
+    }
+}
+
+std::vector<llvm::ConstantInt *> * CodeGen::getSizeList(const std::vector<Expression*>* arraySizes) {
+    auto *sizeList = new std::vector<llvm::ConstantInt *>;
+    if (arraySizes) {
+        for (auto &item : *arraySizes) {
+            sizeList->push_back(static_cast<llvm::ConstantInt *>(visit(item)));
+        }
+    }
+    return sizeList;
+}
