@@ -330,11 +330,11 @@ class ClassNewExpression : public Expression {
         return this->type;
     }
 
-    Identifier* getClassName() {
+    Identifier* getClassName() const {
         return className;
     }
 
-    std::vector<Expression*>* getParamExprList() {
+    std::vector<Expression*>* getParamExprList() const {
         return paramExprList;
     }
     json genJSON() const override {

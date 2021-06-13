@@ -13,7 +13,7 @@ llvm::Type *createArray(llvm::Type *type, std::vector<llvm::ConstantInt *>* size
     
 }
 
-llvm::Type * CodeGen::getType(Type type, std::vector<llvm::ConstantInt *>* arraySizeList, llvm::FunctionType * lambdaType) {
+llvm::Type * CodeGen::getType(Type type, const std::string& className, std::vector<llvm::ConstantInt *>* arraySizeList, llvm::FunctionType * lambdaType) {
     llvm::Type* llvmType = nullptr;
     switch (type) {
         case INT_DEFINE_TYPE:
@@ -41,6 +41,9 @@ llvm::Type * CodeGen::getType(Type type, std::vector<llvm::ConstantInt *>* array
             llvmType = llvm::Type::getInt8Ty(llvmContext);
             break;
         case FUNC_DEFINE_TYPE:
+            break;
+        case CLASS_DEFINE_TYPE:
+            llvmType = llvmTypeTable[symbolTable.findSymbol(className)];
             break;
         default:
             llvmType = llvm::Type::getVoidTy(llvmContext);

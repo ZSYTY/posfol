@@ -1,0 +1,26 @@
+
+interface Ai {
+    void print_in_a();
+};
+
+class A implements Ai{
+    public int a_x;
+    public int a_y;
+    public char a_s;
+
+    public A(int x) { // must implement construction function
+        self.a_x = x;
+        self.a_y = 1;
+        self.a_s = '1';
+    }
+    public void print_in_a() {
+        print("print in A: %d\n", self.a_x);
+        return;
+    }
+};
+
+int main() {
+    A a = new A(7);
+    a.print_in_a();
+    return 0;
+}

@@ -14,7 +14,7 @@ enum class OutputType {
 enum class ParseArgException {
     HELP, ERROR, ACCEPT
 };
-std::string input_name = "../testCode/p3.pfl", output_name = "";
+std::string input_name = "../testCode/test_class.pfl", output_name = "";
 
 ParseArgException get_args(int argc, char **argv) {
     const std::string help_str =
