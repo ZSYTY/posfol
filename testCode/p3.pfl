@@ -121,8 +121,11 @@ int main() {
             recommend[i] = true;
         }
     }
-
-    print("GPA: %.1f\n", (float)total_grade / (float)try_credit);
+    if (try_credit == 0) {
+        print("GPA: 0.0\n");
+    } else {
+        print("GPA: %.1lf\n", (float)total_grade / (float)try_credit);
+    }
     print("Hours Attempted: %d\n", try_credit);
     print("Hours Completed: %d\n", get_credit);
     print("Credits Remaining: %d\n", rest_credit);
