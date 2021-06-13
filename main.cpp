@@ -15,19 +15,13 @@ enum class ParseArgException {
     HELP, ERROR, ACCEPT
 };
 std::string input_name = "../testCode/p3.pfl", output_name = "";
-bool debug = false, keep = false, b_type = false;
 
 ParseArgException get_args(int argc, char **argv) {
     const std::string help_str =
-            "SPL Compiler\n"
-            "Usage: SPL-compiler [options] file...\n"
+            "PFL Compiler\n"
+            "Usage: PFL-compiler [options] file...\n"
             "Options:\n"
-            "  -o <name>  Specify the name of output file.\n"
-            "  -t <type>  Specify the type of output file. It can be exe, obj, asm and ll.\n"
-            "             By default, executable file will be generated.\n"
-            "  -d         Print debug message.\n"
-            "  -k         Keep intermediate file.\n"
-            "  -h         Show usage\n";
+            "  -o <name>  Specify the name of output file.\n";
 
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-o") == 0) {
@@ -41,33 +35,6 @@ ParseArgException get_args(int argc, char **argv) {
                 std::cout << "unknown output file name" << std::endl;
                 return ParseArgException::ERROR;
             }
-        } else if (strcmp(argv[i], "-d") == 0) {
-            debug = true;
-        } else if (strcmp(argv[i], "-k") == 0) {
-            keep = true;
-        } else if (strcmp(argv[i], "-t") == 0) {
-            if (b_type) {
-                std::cout << "more than one output type is specified" << std::endl;
-                return ParseArgException::ERROR;
-            } else if (i + 1 < argc) {
-                ++i;
-                b_type = true;
-                if (strcmp(argv[i], "exe") == 0) {
-                    output_type = OutputType::EXE;
-                } else if (strcmp(argv[i], "obj") == 0) {
-                    output_type = OutputType::OBJ;
-                } else if (strcmp(argv[i], "asm") == 0) {
-                    output_type = OutputType::ASM;
-                } else if (strcmp(argv[i], "ll") == 0) {
-                    output_type = OutputType::LL;
-                } else {
-                    std::cout << "unknown output type" << std::endl;
-                    return ParseArgException::ERROR;
-                }
-            }
-        } else if (strcmp(argv[i], "-h") == 0) {
-            std::cout << "help" << std::endl;
-            return ParseArgException::HELP;
         } else {
             if (input_name.empty()) {
                 input_name = argv[i];
