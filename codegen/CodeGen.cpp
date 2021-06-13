@@ -683,6 +683,9 @@ llvm::Value *CodeGen::visit(const IOStatement *ioStatement) {
                     }
                 }
             }
+            if (arg->getType()->isFloatTy()) {
+                arg = irBuilder.CreateFPExt(arg, llvm::Type::getDoubleTy(llvmContext), "promoteToDouble");
+            }
             args.push_back(arg);
         }
     }

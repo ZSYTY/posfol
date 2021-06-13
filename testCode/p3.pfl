@@ -3,7 +3,7 @@ int credit[100];
 char pre[100][100][100][50];
 int T[100];
 char grade[100];
-bool can_taken[100];
+bool already_taken[100];
 bool recommend[100];
 
 int course_num = 0;
@@ -34,7 +34,7 @@ bool judge(char p_course[50]) {
     int i;
     for (i = 0; i < course_num; i = i + 1) {
         if (equals(course[i], p_course)) {
-            return can_taken[i];
+            return already_taken[i];
         }
     }
     return false;
@@ -54,12 +54,9 @@ int main() {
         read("%d", credit[i]);
         total_credit = total_credit + credit[i];
         read("%c", discard);
+        pre_coursers[0] = '\0';
         read("%[^|]", pre_coursers);
-        if (pre_coursers[0] == '\0') {
-            can_taken[i] = true;
-        } else {
-            can_taken[i] = false;
-        }
+
         int j = 0;
         int t = 0;
         int m = 0;
@@ -69,7 +66,6 @@ int main() {
                 pre[i][t][m][n] = '\0';
                 m = m + 1;
                 n = 0;
-                n = n + 1;
                 continue;
             }
             if (pre_coursers[j] == ';') {
@@ -77,18 +73,22 @@ int main() {
                 t = t + 1;
                 m = 0;
                 n = 0;
-                n = n + 1;
                 continue;
             }
             pre[i][t][m][n] = pre_coursers[j];
             n = n + 1;
         }
-        T[i] = t + 1;
+        if (pre_coursers[0] == '\0') {
+            T[i] = 0;
+        } else {
+            T[i] = t + 1;
+        }
         read("%c", discard);
         read("%[^\n]", grade[i]);
         if (grade[i] != '\0') {
             try_credit = try_credit + credit[i];
             if (grade[i] != 'F') {
+                already_taken[i] = true;
                 get_credit = get_credit + credit[i];
                 total_grade = total_grade + credit[i] * (int)('E' - grade[i]);
             }
@@ -99,39 +99,33 @@ int main() {
     course_num = i;
     rest_credit = total_credit - get_credit;
 
-    while (true) {
-        bool finish = true;
-        int i;
-        for (i = 0; i < course_num; i = i + 1) {
-            if (can_taken[i]) {
-                continue;
+    for (i = 0; i < course_num; i = i + 1) {
+        if (already_taken[i]) {
+            continue;
+        }
+        bool can_this = false;
+        int t;
+        for (t = 0; t < T[i]; t = t + 1) {
+            bool can_this_group = true;
+            int m = 0;
+            while (pre[i][t][m][0] != '\0') {
+                can_this_group = can_this_group && judge(pre[i][t][m]);
+                m = m + 1;
             }
-            bool can_this = false;
-            int t;
-            for (t = 0; t < T[i]; t = t + 1) {
-                bool can_this_group = true;
-                int m = 0;
-                while (pre[i][t][m][0] != '\0') {
-                    can_this_group = can_this_group && judge(pre[i][t][m]);
-                    m = m + 1;
-                }
-                if (can_this_group == true) {
-                    can_this = true;
-                    break;
-                }
-            }
-            if (can_this) {
-                can_taken[i] = true;
-                recommend[i] = true;
-                finish = false;
+            if (can_this_group == true) {
+                can_this = true;
+                break;
             }
         }
-        if (finish) {
-            break;
+        if (can_this || T[i] == 0) {
+            recommend[i] = true;
         }
     }
-
-    print("GPA: %.1f\n", 1.0 * (float)total_grade / (float)try_credit);
+    if (try_credit == 0) {
+        print("GPA: 0.0\n");
+    } else {
+        print("GPA: %.1lf\n", (float)total_grade / (float)try_credit);
+    }
     print("Hours Attempted: %d\n", try_credit);
     print("Hours Completed: %d\n", get_credit);
     print("Credits Remaining: %d\n", rest_credit);
