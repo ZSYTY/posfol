@@ -491,6 +491,10 @@ llvm::Value *CodeGen::visit(const ForStatement * forStatement) {
     llvm::Function* theFunction = irBuilder.GetInsertBlock()->getParent();
     llvm::BasicBlock* block = llvm::BasicBlock::Create(llvmContext, "forloop", theFunction);
     llvm::BasicBlock* after = llvm::BasicBlock::Create(llvmContext, "forcont");
+    llvm::BasicBlock* continueBlock = llvm::BasicBlock::Create(llvmContext, "continueBlock");
+
+    continueStack.push(continueBlock);
+    breakStack.push(after);
 
     // 执行初始化语句
     if(forStatement->getInitial()) {
@@ -514,6 +518,9 @@ llvm::Value *CodeGen::visit(const ForStatement * forStatement) {
     visit(forStatement->getForBlock());
     // 函数体执行完毕，栈popAR
     symbolTable.popAR();
+    theFunction->getBasicBlockList().push_back(continueBlock);
+    irBuilder.CreateBr(continueBlock);
+    irBuilder.SetInsertPoint(continueBlock);
     // 做change语句
     if(forStatement->getChange()) {
         visit(forStatement->getChange());
@@ -527,6 +534,9 @@ llvm::Value *CodeGen::visit(const ForStatement * forStatement) {
     theFunction->getBasicBlockList().push_back(after);
     irBuilder.SetInsertPoint(after);
 
+    continueStack.pop();
+    breakStack.pop();
+
     return nullptr;
 }
 
@@ -534,6 +544,10 @@ llvm::Value *CodeGen::visit(const WhileStatement *whileStatement) {
     llvm::Function* theFunction = irBuilder.GetInsertBlock()->getParent();
     llvm::BasicBlock* block = llvm::BasicBlock::Create(llvmContext, "whileloop", theFunction);
     llvm::BasicBlock* after = llvm::BasicBlock::Create(llvmContext, "whilecont");
+    llvm::BasicBlock* continueBlock = llvm::BasicBlock::Create(llvmContext, "continueBlock");
+
+    continueStack.push(continueBlock);
+    breakStack.push(after);
 
     llvm::Value* condValue = visit(whileStatement->getCondition());
     if(!condValue) {
@@ -545,11 +559,17 @@ llvm::Value *CodeGen::visit(const WhileStatement *whileStatement) {
     symbolTable.pushAR();
     visit(whileStatement->getWhileBlock());
     symbolTable.popAR();
+    theFunction->getBasicBlockList().push_back(continueBlock);
+    irBuilder.CreateBr(continueBlock);
+    irBuilder.SetInsertPoint(continueBlock);
     condValue = visit(whileStatement->getCondition());
     condValue = CastToBoolean(llvmContext, condValue);
     irBuilder.CreateCondBr(condValue, block, after);
     theFunction->getBasicBlockList().push_back(after);
     irBuilder.SetInsertPoint(after);
+
+    continueStack.pop();
+    breakStack.pop();
 
     return nullptr;
 }
@@ -630,3 +650,13 @@ llvm::Value *CodeGen::visit(const AssignExpression *assignExpression) {
     irBuilder.CreateStore(source, target);
     return target;
 }
+
+llvm::Value *CodeGen::visit(const BreakStatement *breakStatement) {
+    return nullptr;
+}
+
+llvm::Value *CodeGen::visit(const ContinueStatement *continueStatement) {
+    return nullptr;
+}
+
+
